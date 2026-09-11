@@ -197,7 +197,7 @@ w_t=
 
 ## 5. 三个实验
 
-默认 \(T=2\times 10^4\)，3 个 seed，画均值±min/max 带。先 1D/10D，不要一上来扫维度。
+默认 \(T=2\times 10^4\)。主图 \(A=I\) **单次运行**（确定性，不画均值带）。高斯 \(A\) 的 3 个 seed 只进附录，三条线分开画。原点是鞍点静止点，故首步用固定偏离 \(e_1/-e_1\)（不是算法声称的 \(w_1=0\) 行为）。
 
 ### Exp.1 Self-play 常值 regret（主文 Figure 1）
 
@@ -244,9 +244,9 @@ w_t=
 
 **Step 3 后半.（已完成）** 打开 doubling。检查：`python experiment/scripts/check_doubling.py`。\(t=1\) 不加倍；\(\chi\) 只用自己的 \(g\)；\(\beta\) 非降；\(J\le\lceil\log_2(L^{\mathrm{row}}/\ell_1)\rceil\)；\(\gamma\) 与 \(G_{\mathrm{cum}}\) 不重置。摘要：`results/doubling_g2.json`。下一步 Exp.1，不要跳。
 
-**Step 4. 数值体检。** `q_t` 对大 \(s\) 不 inf；\(\alpha,B\) 不 nan；\(w_t\) 不爆到 `1e20`。必要时 `float64` + §3.2 的 log 改写。
+**Step 4.（已完成，并入 Exp.1 / 对拍）** 闭式 vs 隐式半径：`python experiment/scripts/check_closedform.py`。全程 `assert_invariants()`（\(\beta\) 非降、\(\gamma\) 冻结、\(G_{\mathrm{cum}}\) 只累加、\(B\ge 4\)）。
 
-**Step 5. Exp.1。** 出 Figure 1。人工看是否平台。记录 `ell1,beta0,epsilon,T`。
+**Step 5.（已完成）** Exp.1：`python experiment/scripts/exp1_selfplay.py` 写 json；`python experiment/scripts/plot_exp1.py --appendix` 出图。主图 `figures/exp1_selfplay.pdf`（\(A=I\) 单跑）。高斯 \(A\) 三 seed 进 `figures/exp1_G*_gaussian.pdf`，不画均值带。下一步 Exp.2，cold restart 仍推迟。
 
 **Step 6. Exp.2。** 先 2b（解析最死），再 2a。
 

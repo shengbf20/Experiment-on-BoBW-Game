@@ -128,6 +128,11 @@ class QuadraticGame(Game):
             if self.A.shape != (dim, dim):
                 raise ValueError("A must be (dim, dim)")
 
+    @classmethod
+    def gaussian(cls, dim: int = 10, mu: float = 0.2, seed: int = 0) -> "QuadraticGame":
+        rng = np.random.default_rng(seed)
+        return cls(dim=dim, mu=mu, A=rng.normal(size=(dim, dim)).astype(_DTYPE))
+
     def phi(self, x, y) -> float:
         x = _vec(x, self.dim_x)
         y = _vec(y, self.dim_y)

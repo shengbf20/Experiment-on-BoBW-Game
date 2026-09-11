@@ -169,5 +169,6 @@ w_t=
 - Step 0：本合同。
 - Step 1（已完成）：`src/games.py`，`src/metrics.py`，`scripts/check_games_metrics.py`。
 - Step 2（已完成）：冻结 \(\beta\) 闭式核，`scripts/check_frozen_beta.py`。
-- Step 3（已完成）：打开加倍，`scripts/check_doubling.py`。\(t=1\) 不加倍；\(\chi\) 只用自己的 \(g\)；\(\beta\) 非降；\(J\) 有限且 \(\gamma\) 不重置。
-- 下一步：Exp.1（self-play 出图），不要跳到 Exp.2。
+- Step 3（已完成）：打开加倍，`scripts/check_doubling.py`。
+- Step 4–5（已完成）：`hist` 含 `lin/ell/beta/J`；`assert_invariants`；闭式对拍 `scripts/check_closedform.py`；Exp.1 `scripts/exp1_selfplay.py` + `scripts/plot_exp1.py`。
+- 下一步：Exp.2。Cold restart 与外生对手循环仍推迟。

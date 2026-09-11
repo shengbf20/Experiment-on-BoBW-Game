@@ -69,6 +69,7 @@ class ClosedFormPlayer:
         self.last_chi: float | None = None
         self.beta_path = [self.beta]
         self.ell_path = [self.ell]
+        self.J_path = [0]
 
     def _refresh_action(self) -> None:
         theta = self.h + self.G_cum
@@ -123,12 +124,33 @@ class ClosedFormPlayer:
         self._refresh_action()
         self.beta_path.append(self.beta)
         self.ell_path.append(self.ell)
+        self.J_path.append(self.J)
 
     def finite(self) -> bool:
         vals = (self.alpha, self.B, self.Vbar, self.zeta, self.beta, self.gamma, self.Mhat)
         if not all(np.isfinite(v) for v in vals):
             return False
         return bool(np.isfinite(self.action).all() and np.isfinite(self.G_cum).all())
+
+    def assert_invariants(self) -> None:
+        if not self.finite():
+            raise AssertionError("non-finite player state")
+        if abs(self.gamma - self.gamma_init) > 0.0:
+            raise AssertionError("gamma must stay frozen")
+        if self.B < 4.0:
+            raise AssertionError(f"B={self.B} < 4")
+        if self.Vbar + 1e-12 < 4.0 * self.Mhat * self.Mhat:
+            raise AssertionError("Vbar < 4 Mhat^2")
+        if float(np.sqrt(self.Vbar)) + 1e-12 < 2.0 * self.Mhat:
+            raise AssertionError("a < 2 Mhat")
+        if self.alpha <= 0.0:
+            raise AssertionError("alpha must be positive")
+        betas = np.asarray(self.beta_path, dtype=_DTYPE)
+        if np.any(np.diff(betas) < -1e-15):
+            raise AssertionError("beta decreased")
+        if not self.adaptive:
+            if self.J != 0 or abs(self.beta - self.beta_init) > 0.0:
+                raise AssertionError("frozen-beta player doubled or moved beta")
 
 
 def self_play(
@@ -139,8 +161,22 @@ def self_play(
     radius: float = 1.0,
 ):
     metrics = RunningMetrics(game, radius=radius)
-    hist = {key: [] for key in ("reg_x", "reg_y", "Q", "gap", "x_norm", "y_norm")}
+    hist = {
+        key: []
+        for key in (
+            "reg_x",
+            "reg_y",
+            "lin_x",
+            "lin_y",
+            "Q",
+            "gap",
+            "x_norm",
+            "y_norm",
+        )
+    }
     max_w = 0.0
+    cum_x = np.zeros(player_x.dim, dtype=_DTYPE)
+    cum_y = np.zeros(player_y.dim, dtype=_DTYPE)
     for _ in range(int(T)):
         x = player_x.action.copy()
         y = player_y.action.copy()
@@ -150,8 +186,24 @@ def self_play(
         z = np.concatenate([x, y])
         player_x.observe(gx, z)
         player_y.observe(gy, z)
+        cum_x = cum_x + gx
+        cum_y = cum_y + gy
+        if not np.allclose(player_x.G_cum, cum_x) or not np.allclose(player_y.G_cum, cum_y):
+            raise AssertionError("G_cum was reset or failed to accumulate")
+        player_x.assert_invariants()
+        player_y.assert_invariants()
         hist["x_norm"].append(float(np.linalg.norm(x)))
         hist["y_norm"].append(float(np.linalg.norm(y)))
-        for key in ("reg_x", "reg_y", "Q", "gap"):
+        for key in ("reg_x", "reg_y", "lin_x", "lin_y", "Q", "gap"):
             hist[key].append(float(snap[key]))
+    # NOTE: beta/ell/J paths include the initial state, so they have length
+    # T+1 while the metric arrays above have length T. beta_path[s] is the
+    # coefficient USED for round s (1-indexed): align as beta_x[t-1] when
+    # plotting against t = 1..T.
+    hist["beta_x"] = [float(v) for v in player_x.beta_path]
+    hist["beta_y"] = [float(v) for v in player_y.beta_path]
+    hist["ell_x"] = [float(v) for v in player_x.ell_path]
+    hist["ell_y"] = [float(v) for v in player_y.ell_path]
+    hist["J_x"] = [int(v) for v in player_x.J_path]
+    hist["J_y"] = [int(v) for v in player_y.J_path]
     return metrics, hist, max_w

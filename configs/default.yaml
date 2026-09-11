@@ -6,7 +6,7 @@ T: 20000
 seeds: [0, 1, 2]
 dtype: float64
 
-# false = frozen-beta closed-form (pre-Exp health check). true = warm doubling.
+# false = frozen-beta health check. Exp.1 uses adaptive: true in the script.
 adaptive: false
 
 # warm = never reset state. restart = cold restart on chi violation (Exp.3 only).
