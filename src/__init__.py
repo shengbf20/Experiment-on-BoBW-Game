@@ -1,1 +1,1 @@
-# games.py, metrics.py, learner.py are in place. Doubling is next.
+# Learner is in place with frozen-β and doubling. Exp.1 is next.

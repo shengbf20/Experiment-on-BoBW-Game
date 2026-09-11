@@ -1,7 +1,6 @@
 """Closed-form unconstrained player (D005 core).
 
-With adaptive=False, skip doubling (frozen-β health check).
-Doubling is implemented but not exercised in this step.
+adaptive=False skips doubling (frozen β). adaptive=True raises ℓ,β after t≥2.
 """
 
 from __future__ import annotations
@@ -67,6 +66,9 @@ class ClosedFormPlayer:
         self.g_prev: np.ndarray | None = None
         self.J = 0
         self.t = 0
+        self.last_chi: float | None = None
+        self.beta_path = [self.beta]
+        self.ell_path = [self.ell]
 
     def _refresh_action(self) -> None:
         theta = self.h + self.G_cum
@@ -108,9 +110,9 @@ class ClosedFormPlayer:
         self.zeta += lam
 
         if self.adaptive and self.t >= 2:
-            chi = row_ratio(g, self.g_prev, z, self.z_prev)
-            if chi > self.ell:
-                self.ell = 2.0 * max(self.ell, chi)
+            self.last_chi = row_ratio(g, self.g_prev, z, self.z_prev)
+            if self.last_chi > self.ell:
+                self.ell = 2.0 * max(self.ell, self.last_chi)
                 self.J += 1
             self.beta = self.beta0 + 64.0 * self.ell * self.ell / self.beta0
 
@@ -119,6 +121,8 @@ class ClosedFormPlayer:
         self.z_prev = z.copy()
         self.g_prev = g.copy()
         self._refresh_action()
+        self.beta_path.append(self.beta)
+        self.ell_path.append(self.ell)
 
     def finite(self) -> bool:
         vals = (self.alpha, self.B, self.Vbar, self.zeta, self.beta, self.gamma, self.Mhat)

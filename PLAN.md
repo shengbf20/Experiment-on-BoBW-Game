@@ -240,9 +240,9 @@ w_t=
 
 **Step 1–2.（已完成）** `src/games.py`，`src/metrics.py`。检查：`python experiment/scripts/check_games_metrics.py`。
 
-**Step 3 前半.（已完成）** 冻结 \(\beta\) 闭式核：`src/learner.py`。检查：`python experiment/scripts/check_frozen_beta.py`。G2、\(d=1\)、\(T=2000\)、\(\beta=5L_F\)。原点 self-play 是静止点，故体检用首步 \((1,-0.5)\)。摘要：`results/frozen_beta_g2.json`。下一步打开加倍，不要先写 Exp。
+**Step 3 前半.（已完成）** 冻结 \(\beta\) 闭式核：`src/learner.py`。检查：`python experiment/scripts/check_frozen_beta.py`。G2、\(d=1\)、\(T=2000\)、\(\beta=5L_F\)。原点 self-play 是静止点，故体检用首步 \((1,-0.5)\)。摘要：`results/frozen_beta_g2.json`。
 
-**Step 3 后半. 打开 doubling。** 检查：\(\beta\) 非降、\(J\) 有限、\(t=1\) 不加倍、\(\chi\) 只用自己的 \(g\)。
+**Step 3 后半.（已完成）** 打开 doubling。检查：`python experiment/scripts/check_doubling.py`。\(t=1\) 不加倍；\(\chi\) 只用自己的 \(g\)；\(\beta\) 非降；\(J\le\lceil\log_2(L^{\mathrm{row}}/\ell_1)\rceil\)；\(\gamma\) 与 \(G_{\mathrm{cum}}\) 不重置。摘要：`results/doubling_g2.json`。下一步 Exp.1，不要跳。
 
 **Step 4. 数值体检。** `q_t` 对大 \(s\) 不 inf；\(\alpha,B\) 不 nan；\(w_t\) 不爆到 `1e20`。必要时 `float64` + §3.2 的 log 改写。
 
