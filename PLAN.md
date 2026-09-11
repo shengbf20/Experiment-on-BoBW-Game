@@ -248,7 +248,7 @@ w_t=
 
 **Step 5.（已完成）** Exp.1：`python experiment/scripts/exp1_selfplay.py` 写 json；`python experiment/scripts/plot_exp1.py --appendix` 出图。主图 `figures/exp1_selfplay.pdf`（\(A=I\) 单跑）。高斯 \(A\) 三 seed 进 `figures/exp1_G*_gaussian.pdf`，不画均值带。下一步 Exp.2，cold restart 仍推迟。
 
-**Step 6. Exp.2。** 先 2b（解析最死），再 2a。
+**Step 6.（已完成）** Exp.2：`run_loop` 支持外生 Y；`python experiment/scripts/exp2_bobw.py`；`python experiment/scripts/plot_exp2.py`。2b 先跑 G3+\(y\equiv 1\)（\(V=0\) 精确成立）；2a 为 G2 在 \(T/2\) 切到 `slow`。Cold restart 仍推迟。
 
 **Step 7. Exp.3。** 确认 \(J\ge 1\) 后再对比 restart。
 

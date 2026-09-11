@@ -153,13 +153,23 @@ class ClosedFormPlayer:
                 raise AssertionError("frozen-beta player doubled or moved beta")
 
 
-def self_play(
+def run_loop(
     game: Game,
     player_x: ClosedFormPlayer,
-    player_y: ClosedFormPlayer,
     T: int,
+    y_policy,
+    player_y: ClosedFormPlayer | None = None,
+    observe_y=None,
     radius: float = 1.0,
 ):
+    """Simultaneous play. y_policy(t, x) -> y with t 1-indexed.
+
+    If observe_y(t) is true, player_y must be given and is updated; otherwise
+    Y is exogenous and does not receive gradients.
+    """
+    T = int(T)
+    if observe_y is None:
+        observe_y = lambda t: player_y is not None
     metrics = RunningMetrics(game, radius=radius)
     hist = {
         key: []
@@ -170,40 +180,76 @@ def self_play(
             "lin_y",
             "Q",
             "gap",
+            "V_x",
+            "V_y",
+            "G_x",
+            "G_y",
             "x_norm",
             "y_norm",
+            "y_learner",
         )
     }
     max_w = 0.0
     cum_x = np.zeros(player_x.dim, dtype=_DTYPE)
-    cum_y = np.zeros(player_y.dim, dtype=_DTYPE)
-    for _ in range(int(T)):
+    cum_y = None if player_y is None else np.zeros(player_y.dim, dtype=_DTYPE)
+    for t in range(1, T + 1):
         x = player_x.action.copy()
-        y = player_y.action.copy()
+        y = np.asarray(y_policy(t, x), dtype=_DTYPE).reshape(-1)
         max_w = max(max_w, float(np.linalg.norm(x)), float(np.linalg.norm(y)))
         gx, gy = game.feedback(x, y)
         snap = metrics.step(x, y, gx, gy)
         z = np.concatenate([x, y])
         player_x.observe(gx, z)
-        player_y.observe(gy, z)
         cum_x = cum_x + gx
-        cum_y = cum_y + gy
-        if not np.allclose(player_x.G_cum, cum_x) or not np.allclose(player_y.G_cum, cum_y):
-            raise AssertionError("G_cum was reset or failed to accumulate")
+        if not np.allclose(player_x.G_cum, cum_x):
+            raise AssertionError("G_cum^x was reset or failed to accumulate")
         player_x.assert_invariants()
-        player_y.assert_invariants()
+        used_y = bool(observe_y(t))
+        if used_y:
+            if player_y is None:
+                raise ValueError("observe_y is true but player_y is None")
+            player_y.observe(gy, z)
+            cum_y = cum_y + gy
+            if not np.allclose(player_y.G_cum, cum_y):
+                raise AssertionError("G_cum^y was reset or failed to accumulate")
+            player_y.assert_invariants()
         hist["x_norm"].append(float(np.linalg.norm(x)))
         hist["y_norm"].append(float(np.linalg.norm(y)))
-        for key in ("reg_x", "reg_y", "lin_x", "lin_y", "Q", "gap"):
+        hist["y_learner"].append(1 if used_y else 0)
+        for key in ("reg_x", "reg_y", "lin_x", "lin_y", "Q", "gap", "V_x", "V_y", "G_x", "G_y"):
             hist[key].append(float(snap[key]))
-    # NOTE: beta/ell/J paths include the initial state, so they have length
-    # T+1 while the metric arrays above have length T. beta_path[s] is the
-    # coefficient USED for round s (1-indexed): align as beta_x[t-1] when
-    # plotting against t = 1..T.
     hist["beta_x"] = [float(v) for v in player_x.beta_path]
-    hist["beta_y"] = [float(v) for v in player_y.beta_path]
     hist["ell_x"] = [float(v) for v in player_x.ell_path]
-    hist["ell_y"] = [float(v) for v in player_y.ell_path]
     hist["J_x"] = [int(v) for v in player_x.J_path]
-    hist["J_y"] = [int(v) for v in player_y.J_path]
+    if player_y is not None:
+        hist["beta_y"] = [float(v) for v in player_y.beta_path]
+        hist["ell_y"] = [float(v) for v in player_y.ell_path]
+        hist["J_y"] = [int(v) for v in player_y.J_path]
+        hist["t_y"] = player_y.t
+    else:
+        hist["beta_y"] = []
+        hist["ell_y"] = []
+        hist["J_y"] = []
+        hist["t_y"] = 0
     return metrics, hist, max_w
+
+
+def self_play(
+    game: Game,
+    player_x: ClosedFormPlayer,
+    player_y: ClosedFormPlayer,
+    T: int,
+    radius: float = 1.0,
+):
+    def y_policy(_t, _x):
+        return player_y.action.copy()
+
+    return run_loop(
+        game,
+        player_x,
+        T,
+        y_policy=y_policy,
+        player_y=player_y,
+        observe_y=lambda _t: True,
+        radius=radius,
+    )

@@ -171,4 +171,5 @@ w_t=
 - Step 2（已完成）：冻结 \(\beta\) 闭式核，`scripts/check_frozen_beta.py`。
 - Step 3（已完成）：打开加倍，`scripts/check_doubling.py`。
 - Step 4–5（已完成）：`hist` 含 `lin/ell/beta/J`；`assert_invariants`；闭式对拍 `scripts/check_closedform.py`；Exp.1 `scripts/exp1_selfplay.py` + `scripts/plot_exp1.py`。
-- 下一步：Exp.2。Cold restart 与外生对手循环仍推迟。
+- Step 6（已完成）：`run_loop`；Exp.2 `scripts/exp2_bobw.py` + `scripts/plot_exp2.py`。
+- 下一步：Exp.3（cold restart）。G3 断言已在 2b 中检查。
