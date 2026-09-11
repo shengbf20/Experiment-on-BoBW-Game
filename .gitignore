@@ -1,4 +1,4 @@
-# Inner experiment repo. Outputs stay local.
+# Inner experiment repo. Numeric dumps stay local; paper figures are tracked.
 
 __pycache__/
 *.pyc
@@ -9,6 +9,8 @@ results/*
 
 figures/*
 !figures/.gitignore
+!figures/*.pdf
+!figures/*.png
 
 Thumbs.db
 .DS_Store
