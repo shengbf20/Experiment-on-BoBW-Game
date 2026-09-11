@@ -255,7 +255,7 @@ w_t=
 
 **Step 8.（已完成）** 出图。三个 plot 脚本统一 Okabe-Ito 色盲调色板、pdf fonttype 42 矢量字体、线型可分（warm 实线 / restart 虚线）。Exp.3 第三面板改全地平线 + 前 400 轮 inset，标题去掉 \(\sqrt K\) 表述。全链路重跑：json 摘要逐位复现，8 张 pdf/png 定稿于 `figures/`。图注（现象 + 定理编号）在 LaTeX 侧待写，不写“优于 Hsieh”。
 
-**Step 9. Go / no-go（见 §7）。** Exp.1–2 进主文。Exp.3 进主文，但只画 vs \(y\equiv e_1\) 的前段跳跃；不声称 restart 终值更差或 \(\sqrt{K}\) 税。实现细节进论文 appendix，不进 Introduction。
+**Step 9.（已完成）Go / no-go（见 §7）。** 裁决：Exp.1–2 进主文；Exp.3 进主文，只讲有限次加倍 + 一次断状态，不声称 restart 终值更差或 \(\sqrt{K}\) 税。正文落笔：`note/sections/experiments.tex`（三句话 + Figure 1–3，图注只写现象与定理编号 + 超参），在 `main.tex` 中插于 main-result 与 conclusion 之间。pdflatex 全链编译干净（50 页，无未定义引用），图落在正文 23–25 页。实现细节（更新顺序、logaddexp、64 校准）仍在 `experiment/SPEC.md`，需要时进 appendix；Introduction 未提实现。
 
 工时估计（已有公式、从零写代码）：Step 1–4 约半天，Step 5–8 约一天。不要和改主文抢同一周的优先级（主文仍是：一条主定理、对照表、证明进 appendix）。
 
