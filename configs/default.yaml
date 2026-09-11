@@ -1,0 +1,15 @@
+# D005 default hyperparameters. Algorithm does not read L_F, T, G, V, or comparators.
+epsilon: 1.0
+beta0: 1.0
+ell1: 1.0e-3
+T: 20000
+seeds: [0, 1, 2]
+dtype: float64
+
+# false = frozen-beta closed-form (pre-Exp health check). true = warm doubling.
+adaptive: false
+
+# warm = never reset state. restart = cold restart on chi violation (Exp.3 only).
+mode: warm
+
+gap_radius: 1.0

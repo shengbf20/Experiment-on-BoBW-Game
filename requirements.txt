@@ -1,0 +1,6 @@
+# Ambient interpreter. Do not re-run a bare `pip install numpy`: it may
+# downgrade a global 2.x install. matplotlib is the only package this
+# step actually needed; numpy and pyyaml were already present.
+numpy
+matplotlib>=3.8
+pyyaml

@@ -1,0 +1,15 @@
+# Inner experiment repo. Outputs stay local.
+
+__pycache__/
+*.pyc
+.venv/
+
+results/*
+!results/.gitignore
+
+figures/*
+!figures/.gitignore
+
+Thumbs.db
+.DS_Store
+desktop.ini
