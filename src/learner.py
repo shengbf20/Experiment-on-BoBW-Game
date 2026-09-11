@@ -38,12 +38,14 @@ class ClosedFormPlayer:
         ell1: float = 1.0e-3,
         adaptive: bool = False,
         beta: float | None = None,
+        restart: bool = False,
     ):
         self.dim = int(dim)
         self.epsilon = float(epsilon)
         self.beta0 = float(beta0)
         self.ell = float(ell1)
         self.adaptive = bool(adaptive)
+        self.restart = bool(restart)
         if beta is None:
             self.beta = self.beta0 + 64.0 * self.ell * self.ell / self.beta0
         else:
@@ -70,6 +72,9 @@ class ClosedFormPlayer:
         self.beta_path = [self.beta]
         self.ell_path = [self.ell]
         self.J_path = [0]
+        self.just_restarted = False
+        self.n_restarts = 0
+        self.restart_path = [0]
 
     def _refresh_action(self) -> None:
         theta = self.h + self.G_cum
@@ -81,6 +86,22 @@ class ClosedFormPlayer:
         a = float(np.sqrt(self.Vbar))
         q = radial_q(sigma, a, self.beta, self.alpha)
         self.action = (-q / nrm) * theta
+
+    def _cold_reset(self) -> None:
+        """Fresh copy after a doubling: new γ, origin action, clipping re-inited."""
+        self.gamma = self.epsilon * self.beta
+        self.Mhat = self.gamma
+        self.B = 4.0
+        self.Vbar = 4.0 * self.gamma * self.gamma
+        self.alpha = self.epsilon / (np.sqrt(self.B) * np.log(self.B) ** 2)
+        self.sum_hat2 = 0.0
+        self.sum_hat2_over_M2 = 0.0
+        self.zeta = 0.0
+        self.h = np.zeros(self.dim, dtype=_DTYPE)
+        self.G_cum = np.zeros(self.dim, dtype=_DTYPE)
+        self.z_prev = None
+        self.g_prev = None
+        self.action = np.zeros(self.dim, dtype=_DTYPE)
 
     def observe(self, g, z) -> None:
         g = np.asarray(g, dtype=_DTYPE).reshape(-1)
@@ -110,21 +131,31 @@ class ClosedFormPlayer:
         self.alpha = self.epsilon / (np.sqrt(self.B) * np.log(self.B) ** 2)
         self.zeta += lam
 
-        if self.adaptive and self.t >= 2:
+        doubled = False
+        # Skip χ on the first round of an epoch (t=1, or the round after a cold reset).
+        if self.adaptive and self.g_prev is not None:
             self.last_chi = row_ratio(g, self.g_prev, z, self.z_prev)
             if self.last_chi > self.ell:
                 self.ell = 2.0 * max(self.ell, self.last_chi)
                 self.J += 1
+                doubled = True
             self.beta = self.beta0 + 64.0 * self.ell * self.ell / self.beta0
 
-        self.h = g.copy()
-        self.G_cum = self.G_cum + g
-        self.z_prev = z.copy()
-        self.g_prev = g.copy()
-        self._refresh_action()
+        if doubled and self.restart:
+            self._cold_reset()
+            self.just_restarted = True
+            self.n_restarts += 1
+        else:
+            self.just_restarted = False
+            self.h = g.copy()
+            self.G_cum = self.G_cum + g
+            self.z_prev = z.copy()
+            self.g_prev = g.copy()
+            self._refresh_action()
         self.beta_path.append(self.beta)
         self.ell_path.append(self.ell)
         self.J_path.append(self.J)
+        self.restart_path.append(self.n_restarts)
 
     def finite(self) -> bool:
         vals = (self.alpha, self.B, self.Vbar, self.zeta, self.beta, self.gamma, self.Mhat)
@@ -135,8 +166,10 @@ class ClosedFormPlayer:
     def assert_invariants(self) -> None:
         if not self.finite():
             raise AssertionError("non-finite player state")
-        if abs(self.gamma - self.gamma_init) > 0.0:
+        if not self.restart and abs(self.gamma - self.gamma_init) > 0.0:
             raise AssertionError("gamma must stay frozen")
+        if self.restart and abs(self.gamma - self.epsilon * self.beta) > 1e-12:
+            raise AssertionError("restart gamma must equal epsilon * beta")
         if self.B < 4.0:
             raise AssertionError(f"B={self.B} < 4")
         if self.Vbar + 1e-12 < 4.0 * self.Mhat * self.Mhat:
@@ -200,18 +233,24 @@ def run_loop(
         snap = metrics.step(x, y, gx, gy)
         z = np.concatenate([x, y])
         player_x.observe(gx, z)
-        cum_x = cum_x + gx
-        if not np.allclose(player_x.G_cum, cum_x):
-            raise AssertionError("G_cum^x was reset or failed to accumulate")
+        if player_x.just_restarted:
+            cum_x = player_x.G_cum.copy()
+        else:
+            cum_x = cum_x + gx
+            if not np.allclose(player_x.G_cum, cum_x):
+                raise AssertionError("G_cum^x was reset or failed to accumulate")
         player_x.assert_invariants()
         used_y = bool(observe_y(t))
         if used_y:
             if player_y is None:
                 raise ValueError("observe_y is true but player_y is None")
             player_y.observe(gy, z)
-            cum_y = cum_y + gy
-            if not np.allclose(player_y.G_cum, cum_y):
-                raise AssertionError("G_cum^y was reset or failed to accumulate")
+            if player_y.just_restarted:
+                cum_y = player_y.G_cum.copy()
+            else:
+                cum_y = cum_y + gy
+                if not np.allclose(player_y.G_cum, cum_y):
+                    raise AssertionError("G_cum^y was reset or failed to accumulate")
             player_y.assert_invariants()
         hist["x_norm"].append(float(np.linalg.norm(x)))
         hist["y_norm"].append(float(np.linalg.norm(y)))
@@ -221,15 +260,18 @@ def run_loop(
     hist["beta_x"] = [float(v) for v in player_x.beta_path]
     hist["ell_x"] = [float(v) for v in player_x.ell_path]
     hist["J_x"] = [int(v) for v in player_x.J_path]
+    hist["restart_x"] = [int(v) for v in player_x.restart_path]
     if player_y is not None:
         hist["beta_y"] = [float(v) for v in player_y.beta_path]
         hist["ell_y"] = [float(v) for v in player_y.ell_path]
         hist["J_y"] = [int(v) for v in player_y.J_path]
+        hist["restart_y"] = [int(v) for v in player_y.restart_path]
         hist["t_y"] = player_y.t
     else:
         hist["beta_y"] = []
         hist["ell_y"] = []
         hist["J_y"] = []
+        hist["restart_y"] = []
         hist["t_y"] = 0
     return metrics, hist, max_w
 

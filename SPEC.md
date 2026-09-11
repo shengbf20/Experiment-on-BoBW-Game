@@ -130,9 +130,9 @@ w_t=
 
 ---
 
-## Cold restart（对照，后做）
+## Cold restart（对照，Exp.3）
 
-与 D005 同一套 \(\chi,\ell,\beta\)。仅当 \(\chi_t>\ell_t\) 时，在更新 \(\ell,\beta\) 之后清零：\(w,h,G_{\mathrm{cum}},\zeta,z_{\mathrm{prev}},g_{\mathrm{prev}}\)；用新 \(\beta_+\) 设 \(\gamma_+\leftarrow\epsilon\beta_+\)，clipping 按初值公式重开。主实验默认不用。
+与 D005 同一套 \(\chi,\ell,\beta\)。仅当 \(\chi_t>\ell_t\) 时，在更新 \(\ell,\beta\) 之后清零：\(w,h,G_{\mathrm{cum}},\zeta,z_{\mathrm{prev}},g_{\mathrm{prev}}\)；用新 \(\beta_+\) 设 \(\gamma_+\leftarrow\epsilon\beta_+\)，clipping 按初值公式重开。下一轮跳过 \(\chi\)（与 \(t=1\) 相同）。主实验默认不用。
 
 ---
 
@@ -157,7 +157,7 @@ w_t=
 
 - \(\beta\) 非降；`adaptive: false` 时 \(\beta\) 恒等于 \(\beta_1\)。
 - \(t=1\) 不加倍；\(J\) 有限且非降。
-- \(\gamma\) 永不改；warm 路径 \(G_{\mathrm{cum}}\) 只累加、不清零。
+- Warm：\(\gamma\) 永不改，\(G_{\mathrm{cum}}\) 只累加、不清零。Restart：\(\gamma=\epsilon\beta\)，加倍当轮清空 \(G_{\mathrm{cum}}\)。
 - \(B\ge 4\)，\(\overline V\ge 4\widehat M^2\)，\(\alpha>0\)，\(a\ge 2\widehat M\)。
 - \(q_t(s)\) 对大 \(s\) 有限（`logaddexp`）。
 - G3 + \(y\equiv 1\)：\(V_t(u^\star)=0\)，\(1\le G_t^x\le 3\)（度量步再断言）。
@@ -172,4 +172,4 @@ w_t=
 - Step 3（已完成）：打开加倍，`scripts/check_doubling.py`。
 - Step 4–5（已完成）：`hist` 含 `lin/ell/beta/J`；`assert_invariants`；闭式对拍 `scripts/check_closedform.py`；Exp.1 `scripts/exp1_selfplay.py` + `scripts/plot_exp1.py`。
 - Step 6（已完成）：`run_loop`；Exp.2 `scripts/exp2_bobw.py` + `scripts/plot_exp2.py`。
-- 下一步：Exp.3（cold restart）。G3 断言已在 2b 中检查。
+- Step 7（已完成）：cold restart；Exp.3 `scripts/exp3_restart.py` + `scripts/plot_exp3.py`；体检 `scripts/check_restart.py`。

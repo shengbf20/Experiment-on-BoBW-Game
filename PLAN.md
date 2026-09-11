@@ -221,10 +221,11 @@ w_t=
 
 - 游戏：G2，\(\texttt{ell1}=10^{-3}\)（必须真的加倍）。
 - 两条学习器其余相同，只改是否 reset。
-- 图：\(\beta_t\) 或 \(J_t\)（warm 应冻结）；累计 regret（restart 在重置处出台阶）。
-- **成功：** warm 的 \(J\) 符合 \(\lceil\log_2^+(L^{\mathrm{row}}/\ell_1)\rceil\) 量级后不变；restart 更不稳或台阶可见。
+- **协议：** 主图用 X vs \(y\equiv e_1\)（诱导损失的最小点在 \(x=-e_1/\mu\)，不是原点）。Self-play 的鞍点是原点：第一次加倍后 warm 已经回到 0，restart 的跳回不可见，不作为对照。
+- 图（一行三列，前 400 步）：\(J_t\)（有限次后冻结）；\(\|x_t\|\)（restart 在 \(t=3\) 回原点）；\(\operatorname{Reg}^x(0)\)（一次性滞后）。
+- **成功：** \(J=1\) 后冻结；restart 的原点跳跃可见。不把终值相差 \(\approx 94\) 写成 \(\sqrt{K}\) 税。
 - **失败且可修：** 从未加倍 → 再减小 \(\ell_1\) 或加大 \(A,\mu\)。
-- **失败且撤图：** restart 看起来一样好。正文本来就不证明 restart 必更差；删图，不改定理表述。
+- **失败且撤图：** 连 vs-const 的前段也看不出 reset。正文本来就不证明 restart 必更差；删图，不改定理表述。
 
 ### 不做（除非附录还有空）
 
@@ -250,11 +251,11 @@ w_t=
 
 **Step 6.（已完成）** Exp.2：`run_loop` 支持外生 Y；`python experiment/scripts/exp2_bobw.py`；`python experiment/scripts/plot_exp2.py`。2b 先跑 G3+\(y\equiv 1\)（\(V=0\) 精确成立）；2a 为 G2 在 \(T/2\) 切到 `slow`。Cold restart 仍推迟。
 
-**Step 7. Exp.3。** 确认 \(J\ge 1\) 后再对比 restart。
+**Step 7.（已完成）** Exp.3：`python experiment/scripts/check_restart.py`；`python experiment/scripts/exp3_restart.py`；`python experiment/scripts/plot_exp3.py`。主图 `figures/exp3_restart.pdf`（G2 vs \(y\equiv e_1\)，前 400 步）。Self-play json 保留但不进主图。
 
 **Step 8. 出图。** `matplotlib`，pdf 矢量；色盲友好、线型可分；图注只写现象与定理编号，不写“优于 Hsieh”。
 
-**Step 9. Go / no-go（见 §7）。** 决定主文放几张图。实现细节进论文 appendix，不进 Introduction。
+**Step 9. Go / no-go（见 §7）。** Exp.1–2 进主文。Exp.3 进主文，但只画 vs \(y\equiv e_1\) 的前段跳跃；不声称 restart 终值更差或 \(\sqrt{K}\) 税。实现细节进论文 appendix，不进 Introduction。
 
 工时估计（已有公式、从零写代码）：Step 1–4 约半天，Step 5–8 约一天。不要和改主文抢同一周的优先级（主文仍是：一条主定理、对照表、证明进 appendix）。
 
@@ -272,7 +273,7 @@ w_t=
 |---|---|
 | 平台期晚、常数大 | 加大 \(T\)；仍水平就进文，不拟合 \(\bar Q\) |
 | last-iterate 差、平均 gap 好 | 只画平均；与“不声称 last-iterate”一致 |
-| restart 不更差 | 删 Exp.3 |
+| restart 不更差（vs-const 前段也无跳跃） | 删 Exp.3 |
 | self-play regret 真按 \(\sqrt T\) 涨 | 先查 §3.4 顺序与 \(g^y\) 符号；仍反则停实验、查证明 |
 | 切换后崩溃 | 不进主文；论文改回纯理论 |
 
@@ -286,7 +287,7 @@ w_t=
 
 - Figure 1 = Exp.1（G2 为主，G1 作补充可进 appendix）。
 - Figure 2 = Exp.2a + 2b。
-- Figure 3 = Exp.3（仅当 doubling 可见且 restart 有反差）。
+- Figure 3 = Exp.3（G2 vs \(y\equiv e_1\)，前 400 步；self-play 无可见跳跃，不进主图）。
 
 正文三句话就够：self-play 饱和；同一轨迹切换后不重开；warm 有限次加倍、restart 会断状态。不把实验写成贡献条目。
 
