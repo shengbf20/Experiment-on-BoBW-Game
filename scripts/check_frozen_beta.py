@@ -55,14 +55,15 @@ def main():
     beta = 5.0 * L_F
     test_origin_is_rest_point(mu, a, beta)
 
-    game = QuadraticGame(dim=1, mu=mu, A=np.array([[a]]))
+    sx, sy = 0.4, -0.3
+    game = QuadraticGame(dim=1, mu=mu, A=np.array([[a]]), saddle_x=[sx], saddle_y=[sy])
     px = ClosedFormPlayer(dim=1, epsilon=1.0, adaptive=False, beta=beta)
     py = ClosedFormPlayer(dim=1, epsilon=1.0, adaptive=False, beta=beta)
-    # Paper initializes at 0, which is a saddle rest point. Probe the update
-    # from an off-saddle first action; later iterates are produced by FTRL.
-    px.action[:] = 1.0
-    py.action[:] = -0.5
     metrics, hist, max_w = self_play(game, px, py, T=T, radius=1.0)
+    if abs(hist["x_norm"][0]) > 1e-15 or abs(hist["y_norm"][0]) > 1e-15:
+        raise AssertionError("w1 must be the origin")
+    if metrics.Q == 0.0:
+        raise AssertionError("shifted saddle must move from w1=0")
 
     for player, name in ((px, "x"), (py, "y")):
         if not player.finite():
@@ -115,7 +116,8 @@ def main():
         "gamma_x": px.gamma,
         "x_norm_T": float(hist["x_norm"][-1]),
         "y_norm_T": float(hist["y_norm"][-1]),
-        "probe": [1.0, -0.5],
+        "saddle": [sx, sy],
+        "init": "origin",
     }
     out = ROOT / "results" / "frozen_beta_g2.json"
     out.write_text(json.dumps(summary, indent=2), encoding="utf-8")
@@ -129,8 +131,8 @@ def main():
         )
     if gap[-1] > gap[min(49, T - 1)] and T * gap[-1] > 1e3:
         raise AssertionError(f"restricted gap not shrinking: gap_T={gap[-1]}")
-    if hist["x_norm"][-1] >= 1.0 and hist["y_norm"][-1] >= 0.5:
-        raise AssertionError("iterates did not move toward the saddle")
+    if hist["x_norm"][-1] < 1e-4 and hist["y_norm"][-1] < 1e-4:
+        raise AssertionError("iterates stayed at the origin")
 
     print("frozen-beta checks passed")
     print(json.dumps(summary, indent=2))

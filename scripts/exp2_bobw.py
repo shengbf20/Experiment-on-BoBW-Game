@@ -13,11 +13,17 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from games import QuadraticGame, SeparationGame  # noqa: E402
+from games import (  # noqa: E402
+    QuadraticGame,
+    SeparationGame,
+    assert_saddle_comparator,
+    paper_saddle,
+)
 from learner import ClosedFormPlayer, run_loop  # noqa: E402
 
 _DTYPE = np.float64
 PERIOD = 200
+ANCHOR_TOL = 0.05
 
 
 def _load_cfg():
@@ -94,18 +100,23 @@ def run_2b(cfg: dict, T: int, radius: float) -> dict:
 
 
 def run_2a(cfg: dict, T: int, radius: float, dim: int = 10) -> dict:
-    game = QuadraticGame(dim=dim, mu=0.2)
+    sx, sy = paper_saddle(dim)
+    game = QuadraticGame(dim=dim, mu=0.2, saddle_x=sx, saddle_y=sy)
     px, py = _player(dim, cfg), _player(dim, cfg)
-    px.action[0] = 1.0
-    py.action[0] = -1.0
+    if np.any(px.action) or np.any(py.action):
+        raise AssertionError("must not overwrite w1=0")
     half = T // 2
     e1 = np.zeros(dim, dtype=_DTYPE)
     e1[0] = 1.0
+    y_played: dict[int, np.ndarray] = {}
 
     def y_policy(t, _x):
         if t <= half:
-            return py.action.copy()
-        return np.sin(2.0 * np.pi * t / PERIOD) * e1
+            y = py.action.copy()
+        else:
+            y = y_played[half] + np.sin(2.0 * np.pi * (t - half) / PERIOD) * e1
+        y_played[t] = y.copy()
+        return y
 
     metrics, hist, max_w = run_loop(
         game,
@@ -116,12 +127,24 @@ def run_2a(cfg: dict, T: int, radius: float, dim: int = 10) -> dict:
         observe_y=lambda t: t <= half,
         radius=radius,
     )
+    assert_saddle_comparator(game, metrics)
+    if abs(hist["x_norm"][0]) > 1e-15 or abs(hist["y_norm"][0]) > 1e-15:
+        raise AssertionError("w1 must be the origin")
     if px.t != T or py.t != half:
         raise AssertionError(f"observe counts: x.t={px.t} y.t={py.t}, expected {T} and {half}")
     if abs(px.gamma - px.gamma_init) > 0.0:
         raise AssertionError("gamma reset at switch")
     if max_w >= 1e20:
         raise AssertionError(f"switch exploded max_w={max_w}")
+    y_anchor = y_played[half]
+    y_next = y_played[half + 1]
+    step = float(np.linalg.norm(y_next - y_anchor))
+    expected_step = abs(np.sin(2.0 * np.pi / PERIOD))
+    if abs(step - expected_step) > 1e-12:
+        raise AssertionError(f"switch jump {step} != sine step {expected_step}")
+    dist_b = float(np.linalg.norm(y_anchor - sy))
+    if dist_b > ANCHOR_TOL:
+        raise AssertionError(f"y_anchor not near b: ||y-b||={dist_b}")
     payload = {
         "meta": {
             "tag": "G2_switch",
@@ -136,7 +159,9 @@ def run_2a(cfg: dict, T: int, radius: float, dim: int = 10) -> dict:
             "epsilon": float(cfg["epsilon"]),
             "beta0": float(cfg["beta0"]),
             "ell1": float(cfg["ell1"]),
-            "init": "e1 / -e1 then slow after T/2",
+            "init": "origin (paper w1=0); slow sine after T/2, continuous at b",
+            "saddle_x": sx.tolist(),
+            "saddle_y": sy.tolist(),
         },
         "hist": hist,
         "summary": {
@@ -150,6 +175,8 @@ def run_2a(cfg: dict, T: int, radius: float, dim: int = 10) -> dict:
             "t_y": hist["t_y"],
             "gamma_x": px.gamma,
             "G_x": metrics.G_x,
+            "y_anchor_dist_b": dist_b,
+            "switch_step": step,
         },
     }
     _dump("G2_switch", payload)

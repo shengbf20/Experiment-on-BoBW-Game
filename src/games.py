@@ -1,6 +1,8 @@
 """G1 bilinear, G2 quadratic, G3 separation example.
 
 Feedback matches eq:feedback: gx = ∇x Φ, gy = −∇y Φ.
+Constructors default to saddle (0,0) for health checks. Paper runs pass
+paper_saddle(dim) so w1=0 is not a self-play rest point.
 """
 
 from __future__ import annotations
@@ -8,6 +10,7 @@ from __future__ import annotations
 import numpy as np
 
 _DTYPE = np.float64
+PAPER_SADDLE_SCALE = 0.4
 
 
 def _vec(z, dim: int) -> np.ndarray:
@@ -15,6 +18,37 @@ def _vec(z, dim: int) -> np.ndarray:
     if out.size != dim:
         raise ValueError(f"expected dim {dim}, got {out.size}")
     return out
+
+
+def paper_saddle(dim: int):
+    """Paper instance: a = 0.4 e1, b = 0.4 e2."""
+    dim = int(dim)
+    if dim < 2:
+        raise ValueError("paper saddle uses e2; need dim >= 2")
+    sx = np.zeros(dim, dtype=_DTYPE)
+    sy = np.zeros(dim, dtype=_DTYPE)
+    sx[0] = PAPER_SADDLE_SCALE
+    sy[1] = PAPER_SADDLE_SCALE
+    return sx, sy
+
+
+def _offsets(dim: int, saddle_x, saddle_y):
+    sx = np.zeros(dim, dtype=_DTYPE) if saddle_x is None else _vec(saddle_x, dim)
+    sy = np.zeros(dim, dtype=_DTYPE) if saddle_y is None else _vec(saddle_y, dim)
+    return sx, sy
+
+
+def _spectral_normalize(A: np.ndarray) -> np.ndarray:
+    op = float(np.linalg.norm(A, 2))
+    if op > 0.0:
+        return A / op
+    return A
+
+
+def assert_saddle_comparator(game: "Game", metrics) -> None:
+    ax, ay = game.saddle()
+    if not np.allclose(metrics.u_x, ax) or not np.allclose(metrics.u_y, ay):
+        raise AssertionError("G1/G2 comparator must be game.saddle()")
 
 
 class Game:
@@ -52,11 +86,11 @@ class Game:
 
 
 class BilinearGame(Game):
-    """Φ(x, y) = x⊤ A y. Saddle at 0. Gap on the Euclidean R-ball is closed-form."""
+    """Φ = (x−a)⊤ A (y−b). Gap on the R-ball centered at the saddle."""
 
     name = "G1"
 
-    def __init__(self, dim: int = 10, A: np.ndarray | None = None):
+    def __init__(self, dim: int = 10, A: np.ndarray | None = None, saddle_x=None, saddle_y=None):
         self.dim_x = int(dim)
         self.dim_y = int(dim)
         if A is None:
@@ -65,28 +99,42 @@ class BilinearGame(Game):
             self.A = np.asarray(A, dtype=_DTYPE)
             if self.A.shape != (dim, dim):
                 raise ValueError("A must be (dim, dim)")
+        self.sx, self.sy = _offsets(dim, saddle_x, saddle_y)
 
     @classmethod
-    def gaussian(cls, dim: int = 10, seed: int = 0) -> "BilinearGame":
+    def gaussian(
+        cls,
+        dim: int = 10,
+        seed: int = 0,
+        normalize: bool = True,
+        saddle_x=None,
+        saddle_y=None,
+    ) -> "BilinearGame":
         rng = np.random.default_rng(seed)
-        return cls(dim=dim, A=rng.normal(size=(dim, dim)).astype(_DTYPE))
+        A = rng.normal(size=(dim, dim)).astype(_DTYPE)
+        if normalize:
+            A = _spectral_normalize(A)
+        return cls(dim=dim, A=A, saddle_x=saddle_x, saddle_y=saddle_y)
+
+    def saddle(self):
+        return self.sx.copy(), self.sy.copy()
 
     def phi(self, x, y) -> float:
-        x = _vec(x, self.dim_x)
-        y = _vec(y, self.dim_y)
+        x = _vec(x, self.dim_x) - self.sx
+        y = _vec(y, self.dim_y) - self.sy
         return float(x @ (self.A @ y))
 
     def grad_x_phi(self, x, y) -> np.ndarray:
-        y = _vec(y, self.dim_y)
+        y = _vec(y, self.dim_y) - self.sy
         return self.A @ y
 
     def grad_y_phi(self, x, y) -> np.ndarray:
-        x = _vec(x, self.dim_x)
+        x = _vec(x, self.dim_x) - self.sx
         return self.A.T @ x
 
     def restricted_gap(self, x, y, radius: float) -> float:
-        x = _vec(x, self.dim_x)
-        y = _vec(y, self.dim_y)
+        x = _vec(x, self.dim_x) - self.sx
+        y = _vec(y, self.dim_y) - self.sy
         return float(radius * (np.linalg.norm(self.A.T @ x) + np.linalg.norm(self.A @ y)))
 
 
@@ -111,11 +159,18 @@ def _ball_min_quad_plus_lin(vec: np.ndarray, mu: float, radius: float) -> float:
 
 
 class QuadraticGame(Game):
-    """Φ = (μ/2)||x||² + x⊤ A y − (μ/2)||y||². Strongly convex-concave; saddle at 0."""
+    """Φ = (μ/2)||x−a||² + (x−a)⊤ A (y−b) − (μ/2)||y−b||²."""
 
     name = "G2"
 
-    def __init__(self, dim: int = 10, mu: float = 0.2, A: np.ndarray | None = None):
+    def __init__(
+        self,
+        dim: int = 10,
+        mu: float = 0.2,
+        A: np.ndarray | None = None,
+        saddle_x=None,
+        saddle_y=None,
+    ):
         if mu <= 0:
             raise ValueError("G2 requires mu > 0")
         self.dim_x = int(dim)
@@ -127,30 +182,45 @@ class QuadraticGame(Game):
             self.A = np.asarray(A, dtype=_DTYPE)
             if self.A.shape != (dim, dim):
                 raise ValueError("A must be (dim, dim)")
+        self.sx, self.sy = _offsets(dim, saddle_x, saddle_y)
 
     @classmethod
-    def gaussian(cls, dim: int = 10, mu: float = 0.2, seed: int = 0) -> "QuadraticGame":
+    def gaussian(
+        cls,
+        dim: int = 10,
+        mu: float = 0.2,
+        seed: int = 0,
+        normalize: bool = True,
+        saddle_x=None,
+        saddle_y=None,
+    ) -> "QuadraticGame":
         rng = np.random.default_rng(seed)
-        return cls(dim=dim, mu=mu, A=rng.normal(size=(dim, dim)).astype(_DTYPE))
+        A = rng.normal(size=(dim, dim)).astype(_DTYPE)
+        if normalize:
+            A = _spectral_normalize(A)
+        return cls(dim=dim, mu=mu, A=A, saddle_x=saddle_x, saddle_y=saddle_y)
+
+    def saddle(self):
+        return self.sx.copy(), self.sy.copy()
 
     def phi(self, x, y) -> float:
-        x = _vec(x, self.dim_x)
-        y = _vec(y, self.dim_y)
+        x = _vec(x, self.dim_x) - self.sx
+        y = _vec(y, self.dim_y) - self.sy
         return float(0.5 * self.mu * (x @ x) + x @ (self.A @ y) - 0.5 * self.mu * (y @ y))
 
     def grad_x_phi(self, x, y) -> np.ndarray:
-        x = _vec(x, self.dim_x)
-        y = _vec(y, self.dim_y)
+        x = _vec(x, self.dim_x) - self.sx
+        y = _vec(y, self.dim_y) - self.sy
         return self.mu * x + self.A @ y
 
     def grad_y_phi(self, x, y) -> np.ndarray:
-        x = _vec(x, self.dim_x)
-        y = _vec(y, self.dim_y)
+        x = _vec(x, self.dim_x) - self.sx
+        y = _vec(y, self.dim_y) - self.sy
         return self.A.T @ x - self.mu * y
 
     def restricted_gap(self, x, y, radius: float) -> float:
-        x = _vec(x, self.dim_x)
-        y = _vec(y, self.dim_y)
+        x = _vec(x, self.dim_x) - self.sx
+        y = _vec(y, self.dim_y) - self.sy
         r = float(radius)
         sup = 0.5 * self.mu * float(x @ x) + _ball_max_lin_minus_quad(self.A.T @ x, self.mu, r)
         inf = -0.5 * self.mu * float(y @ y) + _ball_min_quad_plus_lin(self.A @ y, self.mu, r)

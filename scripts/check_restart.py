@@ -10,7 +10,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from games import QuadraticGame  # noqa: E402
+from games import QuadraticGame, paper_saddle  # noqa: E402
 from learner import ClosedFormPlayer, run_loop  # noqa: E402
 
 _DTYPE = np.float64
@@ -49,7 +49,8 @@ def test_warm_does_not_wipe():
 def test_origin_jump_vs_const():
     dim = 4
     T = 40
-    game = QuadraticGame(dim=dim, mu=0.2)
+    sx, sy = paper_saddle(dim)
+    game = QuadraticGame(dim=dim, mu=0.2, saddle_x=sx, saddle_y=sy)
     e1 = np.zeros(dim, dtype=_DTYPE)
     e1[0] = 1.0
 

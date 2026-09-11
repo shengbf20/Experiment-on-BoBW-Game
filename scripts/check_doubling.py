@@ -84,12 +84,14 @@ def main():
     ell1 = 1.0e-3
     L_row = g2_row_lipschitz_1d(mu, a)
     j_cap = math.ceil(math.log2(L_row / ell1))
-    game = QuadraticGame(dim=1, mu=mu, A=np.array([[a]]))
+    game = QuadraticGame(
+        dim=1, mu=mu, A=np.array([[a]]), saddle_x=[0.4], saddle_y=[-0.3]
+    )
     px = ClosedFormPlayer(dim=1, epsilon=1.0, beta0=1.0, ell1=ell1, adaptive=True)
     py = ClosedFormPlayer(dim=1, epsilon=1.0, beta0=1.0, ell1=ell1, adaptive=True)
-    px.action[:] = 1.0
-    py.action[:] = -0.5
     metrics, hist, max_w = self_play(game, px, py, T=T, radius=1.0)
+    if abs(hist["x_norm"][0]) > 1e-15 or abs(hist["y_norm"][0]) > 1e-15:
+        raise AssertionError("w1 must be the origin")
 
     for player, name in ((px, "x"), (py, "y")):
         if not player.finite():

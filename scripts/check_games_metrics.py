@@ -10,7 +10,12 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from games import BilinearGame, QuadraticGame, SeparationGame  # noqa: E402
+from games import (  # noqa: E402
+    BilinearGame,
+    QuadraticGame,
+    SeparationGame,
+    paper_saddle,
+)
 from metrics import RunningMetrics  # noqa: E402
 
 
@@ -109,12 +114,49 @@ def test_g2_gap_unconstrained_and_boundary():
     _assert_close(gap_b, 7.0, "G2 boundary gap")
 
 
+def test_shifted_saddle_and_origin_gradient():
+    dim = 10
+    sx, sy = paper_saddle(dim)
+    for game in (
+        BilinearGame(dim=dim, saddle_x=sx, saddle_y=sy),
+        QuadraticGame(dim=dim, mu=0.2, saddle_x=sx, saddle_y=sy),
+    ):
+        ax, ay = game.saddle()
+        _assert_close(ax, sx, f"{game.name} saddle x")
+        _assert_close(ay, sy, f"{game.name} saddle y")
+        gx, gy = game.feedback(ax, ay)
+        _assert_close(gx, 0.0, f"{game.name} F^x(shifted saddle)")
+        _assert_close(gy, 0.0, f"{game.name} F^y(shifted saddle)")
+        z = np.zeros(dim)
+        gx0, gy0 = game.feedback(z, z)
+        if np.allclose(gx0, 0.0) and np.allclose(gy0, 0.0):
+            raise AssertionError(f"{game.name}: origin is still a rest point")
+        m = RunningMetrics(game, radius=1.0)
+        _assert_close(m.u_x, sx, f"{game.name} metrics u_x")
+        _assert_close(m.u_y, sy, f"{game.name} metrics u_y")
+
+
+def test_shifted_g1_gap_and_gaussian_norm():
+    sx, sy = paper_saddle(2)
+    game = BilinearGame(dim=2, A=np.eye(2), saddle_x=sx, saddle_y=sy)
+    x = sx + np.array([0.3, 0.0])
+    y = sy + np.array([0.0, -0.4])
+    gap = game.restricted_gap(x, y, radius=1.0)
+    _assert_close(gap, abs(0.3) + abs(-0.4), "shifted G1 gap")
+    g = BilinearGame.gaussian(dim=4, seed=0, normalize=True)
+    op = float(np.linalg.norm(g.A, 2))
+    if abs(op - 1.0) > 1e-12:
+        raise AssertionError(f"gaussian A should have ||A||_2=1, got {op}")
+
+
 def main():
     test_saddles_and_g3_stationarity()
     test_g3_constant_opponent_metrics()
     test_incremental_matches_batch()
     test_g1_gap_and_linreg_identity()
     test_g2_gap_unconstrained_and_boundary()
+    test_shifted_saddle_and_origin_gradient()
+    test_shifted_g1_gap_and_gaussian_norm()
     print("games + metrics checks passed")
 
 

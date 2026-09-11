@@ -1,7 +1,7 @@
 """Exp.1 self-play runs. Writes json only; plot with plot_exp1.py.
 
-Main figure: A = I, one run. Appendix: gaussian A, three seeds.
-Origin is a saddle rest point, so the first action is a fixed off-saddle probe.
+Main figure: A = I, one run, paper saddle, w1=0.
+Appendix: spectral-normalized gaussian A, three seeds, same saddle and init.
 """
 
 from __future__ import annotations
@@ -17,7 +17,12 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from games import BilinearGame, QuadraticGame  # noqa: E402
+from games import (  # noqa: E402
+    BilinearGame,
+    QuadraticGame,
+    assert_saddle_comparator,
+    paper_saddle,
+)
 from learner import ClosedFormPlayer, self_play  # noqa: E402
 
 _DTYPE = np.float64
@@ -26,14 +31,6 @@ _DTYPE = np.float64
 def _load_cfg():
     with (ROOT / "configs" / "default.yaml").open(encoding="utf-8") as f:
         return yaml.safe_load(f)
-
-
-def _init_actions(dim: int):
-    x = np.zeros(dim, dtype=_DTYPE)
-    y = np.zeros(dim, dtype=_DTYPE)
-    x[0] = 1.0
-    y[0] = -1.0
-    return x, y
 
 
 def _player(dim: int, cfg: dict) -> ClosedFormPlayer:
@@ -61,6 +58,10 @@ def _last_increase(js) -> int:
 def _smoke(hist: dict, max_w: float, T: int, tag: str) -> None:
     if max_w >= 1e20 or not np.isfinite(max_w):
         raise AssertionError(f"{tag}: exploded max_w={max_w}")
+    if abs(hist["x_norm"][0]) > 1e-15 or abs(hist["y_norm"][0]) > 1e-15:
+        raise AssertionError(f"{tag}: w1 must be the origin")
+    if hist["x_norm"][1] == 0.0 and hist["y_norm"][1] == 0.0:
+        raise AssertionError(f"{tag}: stayed at the origin after round 1")
     jx, jy = hist["J_x"][-1], hist["J_y"][-1]
     if jx < 1 or jy < 1:
         raise AssertionError(f"{tag}: expected J>=1 for both, got J_x={jx}, J_y={jy}")
@@ -79,9 +80,12 @@ def _dump(path: Path, payload: dict) -> None:
 def run_one(game, cfg: dict, T: int, radius: float, tag: str, meta: dict) -> dict:
     dim = game.dim_x
     px, py = _player(dim, cfg), _player(dim, cfg)
-    px.action[:], py.action[:] = _init_actions(dim)
+    if np.any(px.action) or np.any(py.action):
+        raise AssertionError("must not overwrite w1=0")
     metrics, hist, max_w = self_play(game, px, py, T=T, radius=radius)
+    assert_saddle_comparator(game, metrics)
     _smoke(hist, max_w, T, tag)
+    sx, sy = game.saddle()
     payload = {
         "meta": {
             **meta,
@@ -93,7 +97,9 @@ def run_one(game, cfg: dict, T: int, radius: float, tag: str, meta: dict) -> dic
             "beta0": float(cfg["beta0"]),
             "ell1": float(cfg["ell1"]),
             "gap_radius": radius,
-            "init": "e1 / -e1",
+            "init": "origin (paper w1=0)",
+            "saddle_x": sx.tolist(),
+            "saddle_y": sy.tolist(),
         },
         "hist": hist,
         "summary": {
@@ -135,27 +141,42 @@ def main():
     radius = float(cfg["gap_radius"])
     dim = int(args.dim)
     seeds = list(cfg.get("seeds", [0, 1, 2]))
+    sx, sy = paper_saddle(dim)
 
-    run_one(BilinearGame(dim=dim), cfg, T, radius, "G1_identity", {"game": "G1", "A": "identity"})
-    run_one(QuadraticGame(dim=dim, mu=0.2), cfg, T, radius, "G2_identity", {"game": "G2", "A": "identity", "mu": 0.2})
+    run_one(
+        BilinearGame(dim=dim, saddle_x=sx, saddle_y=sy),
+        cfg,
+        T,
+        radius,
+        "G1_identity",
+        {"game": "G1", "A": "identity"},
+    )
+    run_one(
+        QuadraticGame(dim=dim, mu=0.2, saddle_x=sx, saddle_y=sy),
+        cfg,
+        T,
+        radius,
+        "G2_identity",
+        {"game": "G2", "A": "identity", "mu": 0.2},
+    )
 
     if not args.main_only:
         for seed in seeds:
             run_one(
-                BilinearGame.gaussian(dim=dim, seed=seed),
+                BilinearGame.gaussian(dim=dim, seed=seed, saddle_x=sx, saddle_y=sy),
                 cfg,
                 T,
                 radius,
                 f"G1_gaussian_seed{seed}",
-                {"game": "G1", "A": "gaussian", "seed": seed},
+                {"game": "G1", "A": "gaussian-spectral", "seed": seed},
             )
             run_one(
-                QuadraticGame.gaussian(dim=dim, mu=0.2, seed=seed),
+                QuadraticGame.gaussian(dim=dim, mu=0.2, seed=seed, saddle_x=sx, saddle_y=sy),
                 cfg,
                 T,
                 radius,
                 f"G2_gaussian_seed{seed}",
-                {"game": "G2", "A": "gaussian", "seed": seed, "mu": 0.2},
+                {"game": "G2", "A": "gaussian-spectral", "seed": seed, "mu": 0.2},
             )
 
 

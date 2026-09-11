@@ -41,11 +41,11 @@ def main():
     fig, axes = plt.subplots(1, 2, figsize=(9.2, 3.4), layout="constrained")
 
     ax = axes[0]
-    ax.plot(t2a, h2a["reg_x"], color="C0", lw=1.4, label=r"$\mathrm{Reg}^x(0)$")
+    ax.plot(t2a, h2a["reg_x"], color="C0", lw=1.4, label=r"$\mathrm{Reg}^x(a)$")
     ax.axvline(half, color="0.35", ls="--", lw=1.0, label=r"$T/2$ switch")
     ax.set_xlabel(r"$t$")
     ax.set_ylabel("individual regret")
-    ax.set_title("G2 same-run switch to slow opponent")
+    ax.set_title("G2 same-run switch (continuous at $b$)")
     ax.legend(frameon=False, fontsize=8)
 
     ax = axes[1]

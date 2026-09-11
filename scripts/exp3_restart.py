@@ -13,7 +13,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from games import QuadraticGame  # noqa: E402
+from games import QuadraticGame, assert_saddle_comparator, paper_saddle  # noqa: E402
 from learner import ClosedFormPlayer, run_loop, self_play  # noqa: E402
 
 _DTYPE = np.float64
@@ -41,7 +41,14 @@ def _dump(tag: str, payload: dict) -> None:
     print(f"wrote {path}  {payload['summary']}")
 
 
+def _paper_game(dim: int) -> QuadraticGame:
+    sx, sy = paper_saddle(dim)
+    return QuadraticGame(dim=dim, mu=0.2, saddle_x=sx, saddle_y=sy)
+
+
 def _smoke_selfplay(tag: str, hist: dict, px: ClosedFormPlayer, T: int) -> None:
+    if abs(hist["x_norm"][0]) > 1e-15 or abs(hist["y_norm"][0]) > 1e-15:
+        raise AssertionError(f"{tag}: w1 must be the origin")
     if hist["J_x"][-1] < 1:
         raise AssertionError(f"{tag}: expected J>=1")
     mid = T // 2
@@ -61,12 +68,14 @@ def _smoke_selfplay(tag: str, hist: dict, px: ClosedFormPlayer, T: int) -> None:
 
 def run_selfplay(cfg: dict, T: int, radius: float, dim: int, restart: bool) -> dict:
     tag = "selfplay_restart" if restart else "selfplay_warm"
-    game = QuadraticGame(dim=dim, mu=0.2)
+    game = _paper_game(dim)
     px, py = _player(dim, cfg, restart), _player(dim, cfg, restart)
-    px.action[0] = 1.0
-    py.action[0] = -1.0
+    if np.any(px.action) or np.any(py.action):
+        raise AssertionError("must not overwrite w1=0")
     metrics, hist, max_w = self_play(game, px, py, T=T, radius=radius)
+    assert_saddle_comparator(game, metrics)
     _smoke_selfplay(tag, hist, px, T)
+    sx, sy = game.saddle()
     payload = {
         "meta": {
             "tag": tag,
@@ -76,7 +85,9 @@ def run_selfplay(cfg: dict, T: int, radius: float, dim: int, restart: bool) -> d
             "protocol": "selfplay",
             "dim": dim,
             "T": T,
-            "init": "e1 / -e1",
+            "init": "origin (paper w1=0)",
+            "saddle_x": sx.tolist(),
+            "saddle_y": sy.tolist(),
         },
         "hist": hist,
         "summary": {
@@ -95,8 +106,10 @@ def run_selfplay(cfg: dict, T: int, radius: float, dim: int, restart: bool) -> d
 
 def run_vs_const(cfg: dict, T: int, radius: float, dim: int, restart: bool) -> dict:
     tag = "const_restart" if restart else "const_warm"
-    game = QuadraticGame(dim=dim, mu=0.2)
+    game = _paper_game(dim)
     px = _player(dim, cfg, restart)
+    if np.any(px.action):
+        raise AssertionError("must not overwrite w1=0")
     e1 = np.zeros(dim, dtype=_DTYPE)
     e1[0] = 1.0
 
@@ -106,6 +119,9 @@ def run_vs_const(cfg: dict, T: int, radius: float, dim: int, restart: bool) -> d
     metrics, hist, max_w = run_loop(
         game, px, T, y_policy=y_policy, player_y=None, observe_y=lambda _t: False, radius=radius
     )
+    assert_saddle_comparator(game, metrics)
+    if abs(hist["x_norm"][0]) > 1e-15:
+        raise AssertionError(f"{tag}: w1 must be the origin")
     if hist["J_x"][-1] < 1:
         raise AssertionError(f"{tag}: expected J>=1 against const opponent")
     if restart:
@@ -124,6 +140,7 @@ def run_vs_const(cfg: dict, T: int, radius: float, dim: int, restart: bool) -> d
             raise AssertionError("warm gamma moved")
         if hist["x_norm"][2] <= 0.0:
             raise AssertionError(f"{tag}: warm should not jump to the origin at t=3")
+    sx, sy = game.saddle()
     payload = {
         "meta": {
             "tag": tag,
@@ -134,6 +151,8 @@ def run_vs_const(cfg: dict, T: int, radius: float, dim: int, restart: bool) -> d
             "dim": dim,
             "T": T,
             "init": "origin",
+            "saddle_x": sx.tolist(),
+            "saddle_y": sy.tolist(),
         },
         "hist": hist,
         "summary": {

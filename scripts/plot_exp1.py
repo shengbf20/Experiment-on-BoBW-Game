@@ -35,8 +35,8 @@ def _panel_row(axes, hist: dict, title: str) -> None:
     t = np.arange(1, T + 1)
     ax_r, ax_g, ax_q = axes
 
-    ax_r.plot(t, hist["reg_x"], color="C0", lw=1.4, label=r"$\mathrm{Reg}^x(0)$")
-    ax_r.plot(t, hist["reg_y"], color="C1", lw=1.4, ls="--", label=r"$\mathrm{Reg}^y(0)$")
+    ax_r.plot(t, hist["reg_x"], color="C0", lw=1.4, label=r"$\mathrm{Reg}^x(a)$")
+    ax_r.plot(t, hist["reg_y"], color="C1", lw=1.4, ls="--", label=r"$\mathrm{Reg}^y(b)$")
     scale = abs(hist["reg_x"][min(99, T - 1)]) / np.sqrt(min(100, T))
     if scale > 0:
         ax_r.plot(t, scale * np.sqrt(t), color="0.5", ls=":", lw=1.0, label=r"$\propto\sqrt{t}$")
@@ -62,8 +62,8 @@ def plot_main() -> None:
     g2 = _load("G2_identity")
     g1 = _load("G1_identity")
     fig, axes = plt.subplots(2, 3, figsize=(10.5, 6.2), layout="constrained")
-    _panel_row(axes[0], g2["hist"], "G2 identity (main)")
-    _panel_row(axes[1], g1["hist"], "G1 identity")
+    _panel_row(axes[0], g2["hist"], "G2 identity, shifted saddle")
+    _panel_row(axes[1], g1["hist"], "G1 identity, shifted saddle")
     out_pdf = ROOT / "figures" / "exp1_selfplay.pdf"
     out_png = ROOT / "figures" / "exp1_selfplay.png"
     fig.savefig(out_pdf)
@@ -87,8 +87,8 @@ def plot_appendix(game: str, seeds: list[int]) -> None:
         gap = np.maximum(np.asarray(hist["gap"], dtype=float), 1e-16)
         axes[1].loglog(t, gap, lw=1.2, ls=ls, label=f"seed {seed}")
         axes[2].plot(t, hist["Q"], lw=1.2, ls=ls, label=f"seed {seed}")
-    axes[0].set_title(f"{game} gaussian A (separate seeds, not a band)")
-    axes[0].set_ylabel(r"$\mathrm{Reg}^x(0)$")
+    axes[0].set_title(f"{game} spectral-normalized gaussian A")
+    axes[0].set_ylabel(r"$\mathrm{Reg}^x(a)$")
     axes[1].set_ylabel("restricted gap")
     axes[2].set_ylabel(r"$Q_t^{\mathrm{obs}}$")
     for ax in axes:

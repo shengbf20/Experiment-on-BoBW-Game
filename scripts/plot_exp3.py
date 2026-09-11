@@ -78,7 +78,7 @@ def main():
     ax.plot(t, hw["reg_x"], color="C0", lw=1.2, label="warm")
     ax.plot(t, hr["reg_x"], color="C1", lw=1.0, ls="--", label="restart")
     ax.set_xlabel(r"$t$")
-    ax.set_ylabel(r"$\mathrm{Reg}^x(0)$")
+    ax.set_ylabel(r"$\mathrm{Reg}^x(a)$")
     ax.set_title("constant gap, parallel tails")
     ax.legend(frameon=False, fontsize=8, loc="lower left")
     # Inset: the gap opens within the first ZOOM rounds, invisible at full scale.
