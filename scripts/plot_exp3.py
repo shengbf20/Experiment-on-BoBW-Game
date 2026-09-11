@@ -10,6 +10,16 @@ import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# Colorblind-safe (Okabe-Ito) palette; "C0"/"C1" below resolve through it.
+# fonttype 42 keeps pdf text as vector TrueType.
+plt.rcParams.update(
+    {
+        "axes.prop_cycle": plt.cycler(color=["#0072B2", "#E69F00", "#009E73", "#CC79A7"]),
+        "pdf.fonttype": 42,
+        "font.size": 9,
+    }
+)
+
 # Early window: one reset is visible here; full-horizon regret then runs in parallel.
 ZOOM = 400
 
@@ -65,14 +75,20 @@ def main():
     ax.legend(frameon=False, fontsize=8)
 
     ax = axes[2]
-    ax.plot(t[:z], hw["reg_x"][:z], color="C0", lw=1.4, label="warm")
-    ax.plot(t[:z], hr["reg_x"][:z], color="C1", lw=1.4, ls="--", label="restart")
-    if t_jump is not None and t_jump <= z:
-        ax.axvline(t_jump, color="0.35", ls=":", lw=1.0)
+    ax.plot(t, hw["reg_x"], color="C0", lw=1.2, label="warm")
+    ax.plot(t, hr["reg_x"], color="C1", lw=1.0, ls="--", label="restart")
     ax.set_xlabel(r"$t$")
     ax.set_ylabel(r"$\mathrm{Reg}^x(0)$")
-    ax.set_title("one-time delay, not a " + r"$\sqrt{K}$ tax")
-    ax.legend(frameon=False, fontsize=8)
+    ax.set_title("constant gap, parallel tails")
+    ax.legend(frameon=False, fontsize=8, loc="lower left")
+    # Inset: the gap opens within the first ZOOM rounds, invisible at full scale.
+    axin = ax.inset_axes([0.44, 0.52, 0.53, 0.42])
+    axin.plot(t[:z], hw["reg_x"][:z], color="C0", lw=1.2)
+    axin.plot(t[:z], hr["reg_x"][:z], color="C1", lw=1.0, ls="--")
+    if t_jump is not None and t_jump <= z:
+        axin.axvline(t_jump, color="0.35", ls=":", lw=0.8)
+    axin.set_title(f"first {z} rounds", fontsize=7)
+    axin.tick_params(labelsize=6)
 
     out_pdf = ROOT / "figures" / "exp3_restart.pdf"
     out_png = ROOT / "figures" / "exp3_restart.png"

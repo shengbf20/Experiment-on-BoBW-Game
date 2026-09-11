@@ -253,7 +253,7 @@ w_t=
 
 **Step 7.（已完成）** Exp.3：`python experiment/scripts/check_restart.py`；`python experiment/scripts/exp3_restart.py`；`python experiment/scripts/plot_exp3.py`。主图 `figures/exp3_restart.pdf`（G2 vs \(y\equiv e_1\)，前 400 步）。Self-play json 保留但不进主图。
 
-**Step 8. 出图。** `matplotlib`，pdf 矢量；色盲友好、线型可分；图注只写现象与定理编号，不写“优于 Hsieh”。
+**Step 8.（已完成）** 出图。三个 plot 脚本统一 Okabe-Ito 色盲调色板、pdf fonttype 42 矢量字体、线型可分（warm 实线 / restart 虚线）。Exp.3 第三面板改全地平线 + 前 400 轮 inset，标题去掉 \(\sqrt K\) 表述。全链路重跑：json 摘要逐位复现，8 张 pdf/png 定稿于 `figures/`。图注（现象 + 定理编号）在 LaTeX 侧待写，不写“优于 Hsieh”。
 
 **Step 9. Go / no-go（见 §7）。** Exp.1–2 进主文。Exp.3 进主文，但只画 vs \(y\equiv e_1\) 的前段跳跃；不声称 restart 终值更差或 \(\sqrt{K}\) 税。实现细节进论文 appendix，不进 Introduction。
 

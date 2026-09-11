@@ -12,6 +12,16 @@ import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# Colorblind-safe (Okabe-Ito) palette; "C0"/"C1" below resolve through it.
+# fonttype 42 keeps pdf text as vector TrueType.
+plt.rcParams.update(
+    {
+        "axes.prop_cycle": plt.cycler(color=["#0072B2", "#E69F00", "#009E73", "#CC79A7"]),
+        "pdf.fonttype": 42,
+        "font.size": 9,
+    }
+)
+
 
 def _load(tag: str) -> dict:
     path = ROOT / "results" / f"exp1_{tag}.json"
