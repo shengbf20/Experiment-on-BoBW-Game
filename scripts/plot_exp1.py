@@ -30,40 +30,69 @@ def _load(tag: str) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _panel_row(axes, hist: dict, title: str) -> None:
-    T = len(hist["reg_x"])
-    t = np.arange(1, T + 1)
+def _panel_row(axes, hist: dict, title: str, t=None, q_mark: int | None = None) -> None:
+    series_t = t if t is not None else np.arange(1, len(hist["reg_x"]) + 1)
     ax_r, ax_g, ax_q = axes
 
-    ax_r.plot(t, hist["reg_x"], color="C0", lw=1.4, label=r"$\mathrm{Reg}^x(a)$")
-    ax_r.plot(t, hist["reg_y"], color="C1", lw=1.4, ls="--", label=r"$\mathrm{Reg}^y(b)$")
-    scale = abs(hist["reg_x"][min(99, T - 1)]) / np.sqrt(min(100, T))
+    ax_r.plot(series_t, hist["reg_x"], color="C0", lw=1.4, label=r"$\mathrm{Reg}^x(a)$")
+    ax_r.plot(series_t, hist["reg_y"], color="C1", lw=1.4, ls="--", label=r"$\mathrm{Reg}^y(b)$")
+    idx100 = min(99, len(hist["reg_x"]) - 1)
+    scale = abs(hist["reg_x"][idx100]) / np.sqrt(float(series_t[idx100]))
     if scale > 0:
-        ax_r.plot(t, scale * np.sqrt(t), color="0.5", ls=":", lw=1.0, label=r"$\propto\sqrt{t}$")
+        ax_r.plot(series_t, scale * np.sqrt(series_t), color="0.5", ls=":", lw=1.0, label=r"$\propto\sqrt{t}$")
     ax_r.set_xlabel(r"$t$")
     ax_r.set_ylabel("individual regret")
     ax_r.set_title(title)
     ax_r.legend(frameon=False, fontsize=8)
 
     gap = np.maximum(np.asarray(hist["gap"], dtype=float), 1e-16)
-    ax_g.loglog(t, gap, color="C0", lw=1.4, label="restricted gap")
-    c = gap[min(99, T - 1)] * min(100, T)
-    ax_g.loglog(t, c / t, color="0.5", ls=":", lw=1.0, label=r"$\propto 1/t$")
+    ax_g.loglog(series_t, gap, color="C0", lw=1.4, label="restricted gap")
+    c = gap[idx100] * float(series_t[idx100])
+    ax_g.loglog(series_t, c / series_t, color="0.5", ls=":", lw=1.0, label=r"$\propto 1/t$")
     ax_g.set_xlabel(r"$t$")
     ax_g.set_ylabel("restricted gap")
     ax_g.legend(frameon=False, fontsize=8)
 
-    ax_q.plot(t, hist["Q"], color="C0", lw=1.4)
+    ax_q.plot(series_t, hist["Q"], color="C0", lw=1.4)
+    if q_mark is not None:
+        ax_q.axvline(q_mark, color="0.35", ls=":", lw=1.0)
     ax_q.set_xlabel(r"$t$")
     ax_q.set_ylabel(r"$Q_t^{\mathrm{obs}}$")
 
 
+def _load_g1_long() -> tuple[dict, np.ndarray, int]:
+    npz_path = ROOT / "results" / "exp1_G1_identity_long.npz"
+    json_path = ROOT / "results" / "exp1_G1_identity_long.json"
+    if not npz_path.is_file() or not json_path.is_file():
+        raise FileNotFoundError("missing G1 long run; run exp1_g1_long.py first")
+    data = np.load(npz_path)
+    meta = json.loads(json_path.read_text(encoding="utf-8"))
+    if "t" in data:
+        t = np.asarray(data["t"], dtype=float)
+    else:
+        stride = int(data["stride"][0])
+        t = 1.0 + stride * np.arange(len(data["Q"]))
+    hist = {
+        "reg_x": np.asarray(data["reg_x"], dtype=float),
+        "reg_y": np.zeros(len(data["Q"]), dtype=float),
+        "gap": np.asarray(data["gap"], dtype=float),
+        "Q": np.asarray(data["Q"], dtype=float),
+    }
+    return hist, t, int(meta["T"])
+
+
 def plot_main() -> None:
     g2 = _load("G2_identity")
-    g1 = _load("G1_identity")
+    g1_hist, g1_t, g1_T = _load_g1_long()
     fig, axes = plt.subplots(2, 3, figsize=(10.5, 6.2), layout="constrained")
-    _panel_row(axes[0], g2["hist"], "G2 identity, shifted saddle")
-    _panel_row(axes[1], g1["hist"], "G1 identity, shifted saddle")
+    _panel_row(axes[0], g2["hist"], r"G2 identity, $T=2\times 10^4$")
+    _panel_row(
+        axes[1],
+        g1_hist,
+        r"G1 identity, $T=2\times 10^5$",
+        t=g1_t,
+        q_mark=20000,
+    )
     out_pdf = ROOT / "figures" / "exp1_selfplay.pdf"
     out_png = ROOT / "figures" / "exp1_selfplay.png"
     fig.savefig(out_pdf)
@@ -95,9 +124,12 @@ def plot_appendix(game: str, seeds: list[int]) -> None:
         ax.set_xlabel(r"$t$")
         ax.legend(frameon=False, fontsize=8)
     out = ROOT / "figures" / f"exp1_{game}_gaussian.pdf"
+    out_png = ROOT / "figures" / f"exp1_{game}_gaussian.png"
     fig.savefig(out)
+    fig.savefig(out_png, dpi=160)
     plt.close(fig)
     print(f"wrote {out}")
+    print(f"wrote {out_png}")
 
 
 def main():

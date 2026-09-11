@@ -238,7 +238,8 @@ w_t=
 
 - 游戏：shifted G1、G2，\(A=I\)，\((a,b)=(0.4 e_1,0.4 e_2)\)。
 - 协议：双方 D005，\(w_1=0\)。
-- 图（一行三列）：累计 \(\operatorname{Reg}_t^x(a),\operatorname{Reg}_t^y(b)\)；log-log restricted gap（加斜率 \(-1\) 参考，正文写 consistent with \(O(1/T)\)，不写 “decays at the \(1/T\) rate”）；\(Q_t\)。
+- 图（一行三列）：累计 \(\operatorname{Reg}_t^x(a),\operatorname{Reg}_t^y(b)\)；log-log restricted gap；\(Q_t\)。G2 主图 \(T=2\times10^4\)。G1 双线性 last-iterate 螺旋在该窗口内 \(Q\) 仍升，主图 G1 行用 \(T=2\times10^5\)（诊断：\(Q\to 0.343\)，末段 \(dQ\sim 10^{-10}\)）。
+- G1 + \(A=I\) 的 regret 沿轨迹恒为 0（\(\Phi\equiv 0\)）；非平凡 G1 regret 只在 Gaussian 附录。
 - 可加一条 \(\sqrt t\) 虚线，**不要**写成 SOTA 对比。
 - Smoke：\(\|x_1\|=\|y_1\|=0\)；\(t=2\) 已离开原点；`J>=1` 且后半段冻结。
 - **成功：** 后半段 regret 与 \(Q\) 近似水平；gap 随 \(T\) 下降。G1 last-iterate 打转可忽略。
