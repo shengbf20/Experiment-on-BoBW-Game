@@ -186,24 +186,35 @@ class ClosedFormPlayer:
                 raise AssertionError("frozen-beta player doubled or moved beta")
 
 
+def _float_path(player, name: str) -> list[float]:
+    return [float(v) for v in getattr(player, name, [])]
+
+
+def _int_path(player, name: str) -> list[int]:
+    return [int(v) for v in getattr(player, name, [])]
+
+
 def run_loop(
     game: Game,
-    player_x: ClosedFormPlayer,
+    player_x,
     T: int,
     y_policy,
-    player_y: ClosedFormPlayer | None = None,
+    player_y=None,
     observe_y=None,
     radius: float = 1.0,
+    u_x=None,
+    u_y=None,
 ):
     """Simultaneous play. y_policy(t, x) -> y with t 1-indexed.
 
     If observe_y(t) is true, player_y must be given and is updated; otherwise
     Y is exogenous and does not receive gradients.
+    u_x / u_y override the default comparator (self-play uses the saddle).
     """
     T = int(T)
     if observe_y is None:
         observe_y = lambda t: player_y is not None
-    metrics = RunningMetrics(game, radius=radius)
+    metrics = RunningMetrics(game, u_x=u_x, u_y=u_y, radius=radius)
     hist = {
         key: []
         for key in (
@@ -219,9 +230,12 @@ def run_loop(
             "G_y",
             "x_norm",
             "y_norm",
+            "dist_x",
+            "dist_y",
             "y_learner",
         )
     }
+    sx, sy = game.saddle()
     max_w = 0.0
     cum_x = np.zeros(player_x.dim, dtype=_DTYPE)
     cum_y = None if player_y is None else np.zeros(player_y.dim, dtype=_DTYPE)
@@ -233,7 +247,7 @@ def run_loop(
         snap = metrics.step(x, y, gx, gy)
         z = np.concatenate([x, y])
         player_x.observe(gx, z)
-        if player_x.just_restarted:
+        if getattr(player_x, "just_restarted", False):
             cum_x = player_x.G_cum.copy()
         else:
             cum_x = cum_x + gx
@@ -245,7 +259,7 @@ def run_loop(
             if player_y is None:
                 raise ValueError("observe_y is true but player_y is None")
             player_y.observe(gy, z)
-            if player_y.just_restarted:
+            if getattr(player_y, "just_restarted", False):
                 cum_y = player_y.G_cum.copy()
             else:
                 cum_y = cum_y + gy
@@ -254,32 +268,37 @@ def run_loop(
             player_y.assert_invariants()
         hist["x_norm"].append(float(np.linalg.norm(x)))
         hist["y_norm"].append(float(np.linalg.norm(y)))
+        hist["dist_x"].append(float(np.linalg.norm(x - sx)))
+        hist["dist_y"].append(float(np.linalg.norm(y - sy)))
         hist["y_learner"].append(1 if used_y else 0)
         for key in ("reg_x", "reg_y", "lin_x", "lin_y", "Q", "gap", "V_x", "V_y", "G_x", "G_y"):
             hist[key].append(float(snap[key]))
-    hist["beta_x"] = [float(v) for v in player_x.beta_path]
-    hist["ell_x"] = [float(v) for v in player_x.ell_path]
-    hist["J_x"] = [int(v) for v in player_x.J_path]
-    hist["restart_x"] = [int(v) for v in player_x.restart_path]
+    hist["beta_x"] = _float_path(player_x, "beta_path")
+    hist["ell_x"] = _float_path(player_x, "ell_path")
+    hist["J_x"] = _int_path(player_x, "J_path")
+    hist["restart_x"] = _int_path(player_x, "restart_path")
+    hist["lam_x"] = _float_path(player_x, "lambda_path")
     if player_y is not None:
-        hist["beta_y"] = [float(v) for v in player_y.beta_path]
-        hist["ell_y"] = [float(v) for v in player_y.ell_path]
-        hist["J_y"] = [int(v) for v in player_y.J_path]
-        hist["restart_y"] = [int(v) for v in player_y.restart_path]
+        hist["beta_y"] = _float_path(player_y, "beta_path")
+        hist["ell_y"] = _float_path(player_y, "ell_path")
+        hist["J_y"] = _int_path(player_y, "J_path")
+        hist["restart_y"] = _int_path(player_y, "restart_path")
+        hist["lam_y"] = _float_path(player_y, "lambda_path")
         hist["t_y"] = player_y.t
     else:
         hist["beta_y"] = []
         hist["ell_y"] = []
         hist["J_y"] = []
         hist["restart_y"] = []
+        hist["lam_y"] = []
         hist["t_y"] = 0
     return metrics, hist, max_w
 
 
 def self_play(
     game: Game,
-    player_x: ClosedFormPlayer,
-    player_y: ClosedFormPlayer,
+    player_x,
+    player_y,
     T: int,
     radius: float = 1.0,
 ):

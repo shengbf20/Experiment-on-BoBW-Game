@@ -203,6 +203,11 @@ class QuadraticGame(Game):
     def saddle(self):
         return self.sx.copy(), self.sy.copy()
 
+    def induced_minimizer_x(self, y) -> np.ndarray:
+        """argmin_x Φ(x, y) = a − A(y−b)/μ. Vs-const comparator on G2."""
+        y = _vec(y, self.dim_y) - self.sy
+        return self.sx - (self.A @ y) / self.mu
+
     def phi(self, x, y) -> float:
         x = _vec(x, self.dim_x) - self.sx
         y = _vec(y, self.dim_y) - self.sy

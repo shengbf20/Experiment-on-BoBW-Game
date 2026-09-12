@@ -1,4 +1,4 @@
-"""Exp.1 self-play runs. Writes json only; plot with plot_exp1.py.
+"""Exp.1 self-play runs. Compact json + npz; plot with plot_exp1.py.
 
 Main figure: A = I, one run, paper saddle, w1=0.
 Appendix: spectral-normalized gaussian A, three seeds, same saddle and init.
@@ -7,7 +7,6 @@ Appendix: spectral-normalized gaussian A, three seeds, same saddle and init.
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -24,6 +23,7 @@ from games import (  # noqa: E402
     paper_saddle,
 )
 from learner import ClosedFormPlayer, self_play  # noqa: E402
+from io_results import dump_compact  # noqa: E402
 
 _DTYPE = np.float64
 
@@ -72,11 +72,6 @@ def _smoke(hist: dict, max_w: float, T: int, tag: str) -> None:
         raise AssertionError(f"{tag}: beta_x decreased")
 
 
-def _dump(path: Path, payload: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload), encoding="utf-8")
-
-
 def run_one(game, cfg: dict, T: int, radius: float, tag: str, meta: dict) -> dict:
     dim = game.dim_x
     px, py = _player(dim, cfg), _player(dim, cfg)
@@ -101,7 +96,6 @@ def run_one(game, cfg: dict, T: int, radius: float, tag: str, meta: dict) -> dic
             "saddle_x": sx.tolist(),
             "saddle_y": sy.tolist(),
         },
-        "hist": hist,
         "summary": {
             "max_w": max_w,
             "reg_x_T": hist["reg_x"][-1],
@@ -122,10 +116,11 @@ def run_one(game, cfg: dict, T: int, radius: float, tag: str, meta: dict) -> dic
             "G_y": metrics.G_y,
         },
     }
-    out = ROOT / "results" / f"exp1_{tag}.json"
-    _dump(out, payload)
-    print(f"wrote {out}  J=({payload['summary']['J_x']},{payload['summary']['J_y']}) "
-          f"gap_T={payload['summary']['gap_T']:.3e} Q_T={payload['summary']['Q_T']:.3e}")
+    dump_compact(f"exp1_{tag}", payload, hist)
+    print(
+        f"J=({payload['summary']['J_x']},{payload['summary']['J_y']}) "
+        f"gap_T={payload['summary']['gap_T']:.3e} Q_T={payload['summary']['Q_T']:.3e}"
+    )
     return payload
 
 

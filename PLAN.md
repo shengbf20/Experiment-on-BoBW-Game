@@ -1,6 +1,6 @@
 # 实验方案（flagship = `thm:t006` / D005）
 
-编码合同：`SPEC.md`。评价与完成勾选：`reflection.txt`。执行顺序：本文 §6，**Step 11–18 全部必做**，做完后 `reflection.txt` 第 5 节每一条都必须落实。
+编码合同：`SPEC.md`。评价与完成勾选：`reflection.txt`。执行顺序：本文 §6，**Step 11–18 已全部完成**，`reflection.txt` 第 5 节每一条均已落实。
 
 **主算法：** unknown-\(L_F\) + closed-form + warm rescaling（正文 Sec. 5.1 / D005）。  
 **Literature baseline（必做）：** Hsieh et al. (2021)，`src/hsieh.py`。  
@@ -39,7 +39,7 @@ experiment/
   PLAN.md                 # 本文件：实验设计 + 必做落地步骤
   SPEC.md                 # D005 / Hsieh / comparator 合同
   reflection.txt          # 评价；第 5 节条目必须由 §6 全部落实
-  README.md               # Step 14 补
+  README.md               # 复现入口、命令顺序、仓库边界
   requirements.txt
   src/                    # games.py / metrics.py / learner.py / hsieh.py
   configs/default.yaml
@@ -292,15 +292,18 @@ T\in\{2\times 10^4,\,10^5,\,2\times 10^5\}\ \text{(G1 \(Q\))}.
 \]
 
 列：\(\mathrm{Reg}^x(a)\)、\(Q_T\)、\(\mathrm{Gap}_T\)、\(T\cdot\mathrm{Gap}_T\)、\(J\)。进 appendix。不要跑 \(T<5\times 10^3\) 凑数。
+**成功：** G2 的 \(\mathrm{Reg},Q\) 不随 \(T\) 涨；\(\mathrm{Gap}\) 下降且 \(T\cdot\mathrm{Gap}_T=O(1)\)（本实例上随 \(T\) 加倍而减半，不另声称指数）。G1 的 \(Q\) 在长 horizon 冻结。
 
 ### Exp.LF（Step 16，必做）
 
 G2 self-play，\(A=cI\)，\(c\in\{0.25,0.5,1,2,4,8\}\)，**禁止**谱归一化。记录 \(J,\ell_T,\beta_T,\mathrm{Reg}_T(a),\mathrm{Gap}_T,Q_T\)。进 appendix。正文至多一句 finite doubling tracks realized smoothness。
+**成功：** \(J=1\) 对所有 \(c\)（有限非降，加倍均在 \(t=2\)）；\(\ell_T,\beta_T\) 随 \(c\) 严格递增。\(c\le 2\) 在 \(T=2\times10^4\) 已平台（\(c=1\) 与 Exp.1 一致）。大 \(c\) 上 \(Q,J\) 立即冻结，last-iterate 晚到（\(c=4\) 于 \(T=10^5\) 冻在 \(80.76\)；\(c=8\) 仍在靠近），不是 \(\sqrt{T}\)。
 
 ### Exp.VT（Step 17，两条都必做）
 
 - **17a 幅度扫频：** \(y_t=b+\eta\sin(2\pi t/T_{\mathrm{per}})e_1\)，\(\eta\) 数档。Comparator 用诱导最优固定点。终值 regret vs \(\sqrt{V_T(u)}\)。
 - **17b 更强分离：** 非平稳对手、观测 variation 大、但 \(V_T(u^\star)=O(1)\)。D005 应饱和。不宣称旧算法 \(\Omega(\sqrt{T})\)；Hsieh 可同图画（Step 13 之后）。
+**成功：** 17a 在 \(T_{\mathrm{per}}=100\)、\(\eta\le 0.4\) 上 \(\mathrm{LinReg}\) 随 \(\sqrt{V}\) 上升（更大 \(\eta\) 开始跟踪，静态 regret 回落，已写入附录）。17b 用 G3、\(T_{\mathrm{per}}=\sqrt{T}\)、\(\eta=1/2\)：\(V_T\approx 4.93=O(1)\)，路径长 \(\approx 283\)，D005 平台约 \(58.5\)。Hsieh 同路径静态 regret \(-986\)（跟踪，不是 \(\Omega(\sqrt{T})\)，不作排名）。
 
 ### 明确不做
 
@@ -314,11 +317,11 @@ G2 self-play，\(A=cI\)，\(c\in\{0.25,0.5,1,2,4,8\}\)，**禁止**谱归一化�
 
 ## 6. 落地步骤
 
-按顺序执行。Step 0–10 已完成。**Step 11–18 全部必做**，没有「可选 / 视需要 / 最小闭环」。每步过 go/no-go 再往下。产物：compact `summary` json + 下采样 npz（禁止巨型全程 hist json）。
+按顺序执行。Step 0–18 已完成。产物：compact `summary` json + 下采样 npz（禁止巨型全程 hist json）。`reflection.txt` 第 5 节条目已由下表落实。
 
 **Step 0–10.（已完成）** D005 实现、shifted saddle、\(w_1=0\)、连续 switch、Gaussian 附录、cold restart 图、`experiments.tex` 弱声称插图。Step 3 冻结-\(\beta\) 体检用平移鞍点，不再用手工改第一步。**本阶段未加 Hsieh，这是缺口，由 Step 13 补上，不是最终状态。**
 
-**Step 11. Exp.3 comparator \(\to x^\star\)**（落实：vs-const 不再对鞍点累计）
+**Step 11.（已完成） Exp.3 comparator \(\to x^\star\)**（落实：vs-const 不再对鞍点累计）
 
 - `QuadraticGame.induced_minimizer_x(y)`；`run_vs_const` 把 \(x^\star\) 传入 `RunningMetrics`。
 - Smoke：`V_x(x^\star)==0`；`J>=1`；restart \(t=3\) 回原点；warm 不回；\(\mathrm{Reg}^x(x^\star)\) 后半段水平。
@@ -326,51 +329,50 @@ G2 self-play，\(A=cI\)，\(c\in\{0.25,0.5,1,2,4,8\}\)，**禁止**谱归一化�
 - 改 `experiments.tex` Figure 3 图注。仍不声称 \(\sqrt{K}\) 税。
 - **Go：** 两曲线饱和且差一个常数。**No-go：** 对 \(x^\star\) 仍 \(\Theta(T)\) 变负。
 
-**Step 12. Exp.2-left 换纵轴**（落实：负 regret 不作主曲线）
+**Step 12.（已完成） Exp.2-left 换纵轴**（落实：负 regret 不作主曲线）
 
-- 协议不变。主曲线 \(\|x_t-a\|\)、\(\|y_t-b\|\)、\(V_t^x(a)\)。
+- 协议不变。主曲线 \(\|x_t-a\|\)、\(\|y_t-b\|\)、\(V_t^x(a)\)（\(V\) 用右轴）。
 - 重跑 `exp2_bobw.py --only 2a`、`plot_exp2.py`。改 Figure 2 左图注（part D）。
-- **Go：** 正弦增量；距离有界；\(V\) 在竖线后升起；\(\gamma\) 不变。
+- **Go：** 正弦增量 \(\approx 0.0314\)；\(\max\|x-a\|\approx 0.44\)、\(\max\|y-b\|=1\) 有界；\(V_{T/2}^x(a)\approx 0.014\to V_T\approx 4.95\)；\(\gamma\) 不变、\(J_x=1\)。
 
-**Step 13. 建立 Hsieh (2021) baseline**（落实：literature baseline）
+**Step 13.（已完成） 建立 Hsieh (2021) baseline**（落实：literature baseline）
 
 - `src/hsieh.py`、`scripts/exp_hsieh.py`、`scripts/plot_hsieh.py`、`scripts/check_hsieh.py`（G2 self-play 平台）。合同见 `SPEC.md`。
-- 必跑 G3 const、G2 switch、G2 self-play 体检。G3 对照进主文 Figure 2 右或单独图。
-- 删掉正文 “no other algorithm is shown”。禁止对着 D005 调参。禁止用 restart 冒充。
-- **Go：** Hsieh 在 G2 self-play 平台；G3 两条曲线可解释。**No-go：** self-play 上 Hsieh 走 \(\sqrt{T}\) → 先修实现。若 G3 上 Hsieh 也饱和，写入 limitations，仍算本步完成（实现可信且结果如实报告）。
+- 已跑 G3 const、G2 switch（同一条 Exp.2a 对手序列）、G2 self-play 体检。G3 对照进主文 Figure 2 右。
+- 删掉正文 “no other algorithm is shown”。\(\tau=1\)，未对着 D005 调参。Restart 不是 baseline。
+- **Go：** Hsieh G2 self-play 平台（\(\mathrm{Reg}^x(a)\to 0.377\)，\(Q\) 冻在 \(11.48\)）。G3 上 D005 \(\approx 80\) 与 Hsieh \(\approx 1.2\) **双方都饱和**；已写入 limitations，不声称 realized \(\Omega(\sqrt{T})\)。
 
-**Step 14. README + compact 摘要**（落实：复现性）
+**Step 14.（已完成） README + compact 摘要**（落实：复现性）
 
-- 新 run 一律 compact json + npz。
-- 写 `experiment/README.md`：环境、全部 `check_*.py`、`exp*.py`、`plot_*.py`、`exp_hsieh.py` 的命令顺序，以及一键顺序（11→18）。
-- 外层是否跟踪 `experiment/` 在 README 里写明现状。
+- 新 run 一律 compact json + npz（`src/io_results.py`）。旧的全程 hist json 已用 `scripts/compact_results.py` 剥离。
+- `experiment/README.md`：环境、全部 `check_*.py` / `exp*.py` / `plot_*.py` / `exp_hsieh.py` 命令，以及 11→18 一键顺序。
+- 外层 `.gitignore` 忽略整个 `experiment/`；内层 git 跟踪源码与 figures，不跟踪 `results/`。
 
-**Step 15. Multi-horizon 表**（落实：rate 不只靠目测斜率）
+**Step 15.（已完成） Multi-horizon 表**（落实：rate 不只靠目测斜率）
 
-- 按 §5 Exp.horizon 抽表，进 appendix（`appendix_experiments.tex`）。
-- G2 的 \(\mathrm{Reg},Q\) 应不随 \(T\) 涨；\(T\cdot\mathrm{Gap}_T\) 近似常值。
+- 按 §5 Exp.horizon 从已有 G2 / G1 长跑抽取，`scripts/exp_horizon.py`，进 `appendix_experiments.tex`。
+- **Go：** G2 的 \(\mathrm{Reg},Q\) 不随 \(T\) 涨（\(5.308\), \(0.0289\) 从 \(T=5\times10^3\) 起冻结）。\(T\cdot\mathrm{Gap}_T\) 在 G2 上随 \(T\) 加倍而减半（与 \(O(1/T)\) 相容，不声称更紧的指数）。G1 的 \(Q\) 在 \(10^5\) 后冻结，之后 \(T\cdot\mathrm{Gap}_T\approx 10^2\)。
 
-**Step 16. \(L_F\) sweep**（落实：unknown-\(L_F\) 系统验证）
+**Step 16.（已完成） \(L_F\) sweep**（落实：unknown-\(L_F\) 系统验证）
 
-- 按 §5 Exp.LF。`scripts/exp_lf_sweep.py`。禁止谱归一化。
-- **Go：** \(J\) 有限非降；\(c\) 增大时终值 \(\ell,\beta\) 不减；self-play 仍平台。
+- 按 §5 Exp.LF。`scripts/exp_lf_sweep.py`、`plot_lf_sweep.py`，禁止谱归一化。附录 `app:exp-lf`。
+- **Go：** \(J=1\) 有限非降；\(\ell_T=0.453,0.762,1.44,2.84,5.66,11.32\) 随 \(c\) 不减；\(c=1\) 与 Exp.1 一致。大 \(c\) 是晚到的平台（加大 \(T\)），不是 \(\sqrt{T}\)。
 
-**Step 17. \(V_T\) 适应（两条都做）**（落实：不只 \(V=0\) 端点）
+**Step 17.（已完成） \(V_T\) 适应（两条都做）**（落实：不只 \(V=0\) 端点）
 
-- **17a** 幅度扫频 + regret vs \(\sqrt{V_T(u)}\)。`scripts/exp_vt_sweep.py`。
-- **17b** 非平稳、观测 variation 大、\(V_T(u^\star)=O(1)\)。可与 Hsieh 同图。
-- **Go：** 17a 随 \(\sqrt{V}\) 平滑变差；17b 上 D005 饱和。
+- **17a** 幅度扫频 + regret vs \(\sqrt{V_T(u)}\)。`scripts/exp_vt_sweep.py`、`plot_vt_sweep.py`。附录 `app:exp-vt`。
+- **17b** G3 \(y_t=1+\tfrac12\sin(2\pi t/\sqrt{T})\)，\(V_T\approx 4.93\)，D005 平台约 \(58.5\)。Hsieh 同路径跟踪至 \(-986\)，不声称 \(\Omega(\sqrt{T})\)。
+- **Go：** 17a 的 \(\mathrm{LinReg}\) 随 \(\sqrt{V}\) 在 \(\eta\le 0.4\) 上升；17b 上 D005 饱和。
 
-**Step 18. 正文与附录收口**（落实：新建议全部写进论文实验节）
+**Step 18.（已完成） 正文与附录收口**（落实：新建议全部写进论文实验节）
 
 改 `note/sections/experiments.tex` 与 `appendix_experiments.tex`：
 
-- Figure 1 保留 self-play（可加 horizon 表引用）。
-- Figure 2：左 = Step 12 纵轴；右 = D005 vs Hsieh on G3。
-- Figure 3：\(\mathrm{Reg}^x(x^\star)\)。
-- 附录：Gaussian（已有）、horizon 表、\(L_F\) sweep、\(V_T\) 17a/17b、Hsieh self-play 体检。
-- 删除 “no other algorithm is shown” 以及任何「本轮不加 baseline」。
-- 有 Hsieh 真实曲线且方向正确后，才允许写经验 fallback advantage；否则只写 theorem 分离 + 如实报告。
+- Figure 1 保留 self-play，并引用 horizon 表。
+- Figure 2：左 = Step 12 纵轴；右 = D005 vs Hsieh on G3（双方饱和，不声称 realized \(\Omega(\sqrt{T})\)）。
+- Figure 3：\(\mathrm{Reg}^x(x^\star)\)；图注写明 restart 是机制 ablation，不是 literature baseline。
+- 附录：Gaussian、horizon 表、\(L_F\) sweep、\(V_T\) 17a/17b、Hsieh self-play 体检；总览 `\label{app:experiments}`。
+- 正文第四段指向 unknown-\(L_F\) 与 \(V_T\) 附录。删除 “no other algorithm is shown”。不写经验 fallback advantage。
 
 **完成判据（必须同时满足，对应 `reflection.txt` 第 5 节）**
 
@@ -385,7 +387,7 @@ G2 self-play，\(A=cI\)，\(c\in\{0.25,0.5,1,2,4,8\}\)，**禁止**谱归一化�
 | \(V_T\) 中间制度 | 17a + 18 |
 | 非平稳且 \(V(u^\star)=O(1)\) 的更强分离 | 17b + 18 |
 
-未勾满上表，不得声称「实验闭环完成」。
+未勾满上表，不得声称「实验闭环完成」。上表现已勾满。
 
 ---
 
@@ -408,7 +410,7 @@ G2 self-play，\(A=cI\)，\(c\in\{0.25,0.5,1,2,4,8\}\)，**禁止**谱归一化�
 
 ---
 
-## 8. 主文怎么引用（Step 18 完成后的目标态）
+## 8. 主文怎么引用（当前态）
 
 放在 Main Theorem 与 limitations 之间。
 

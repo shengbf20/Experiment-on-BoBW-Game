@@ -1,16 +1,19 @@
-"""Plot Exp.1 from saved json. Does not rerun the learner."""
+"""Plot Exp.1 from saved json/npz. Does not rerun the learner."""
 
 from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
-
 import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from io_results import load_run  # noqa: E402
 
 # Colorblind-safe (Okabe-Ito) palette; "C0"/"C1" below resolve through it.
 # fonttype 42 keeps pdf text as vector TrueType.
@@ -24,10 +27,8 @@ plt.rcParams.update(
 
 
 def _load(tag: str) -> dict:
-    path = ROOT / "results" / f"exp1_{tag}.json"
-    if not path.is_file():
-        raise FileNotFoundError(f"missing {path}; run exp1_selfplay.py first")
-    return json.loads(path.read_text(encoding="utf-8"))
+    payload, hist = load_run(f"exp1_{tag}")
+    return {"meta": payload.get("meta", payload), "summary": payload.get("summary", {}), "hist": hist}
 
 
 def _panel_row(axes, hist: dict, title: str, t=None) -> None:
@@ -76,7 +77,8 @@ def _load_g1_long() -> tuple[dict, np.ndarray, int]:
         "gap": np.asarray(data["gap"], dtype=float),
         "Q": np.asarray(data["Q"], dtype=float),
     }
-    return hist, t, int(meta["T"])
+    T = int(meta.get("T") or meta.get("summary", {}).get("T") or int(data["T"][0]))
+    return hist, t, T
 
 
 def plot_main() -> None:

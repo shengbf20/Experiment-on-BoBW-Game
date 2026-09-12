@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -15,6 +14,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from games import QuadraticGame, assert_saddle_comparator, paper_saddle  # noqa: E402
 from learner import ClosedFormPlayer, run_loop, self_play  # noqa: E402
+from io_results import dump_compact  # noqa: E402
 
 _DTYPE = np.float64
 
@@ -35,10 +35,13 @@ def _player(dim: int, cfg: dict, restart: bool) -> ClosedFormPlayer:
     )
 
 
-def _dump(tag: str, payload: dict) -> None:
-    path = ROOT / "results" / f"exp3_{tag}.json"
-    path.write_text(json.dumps(payload), encoding="utf-8")
-    print(f"wrote {path}  {payload['summary']}")
+def _dump_const(tag: str, payload: dict, hist: dict) -> None:
+    dump_compact(
+        f"exp3_{tag}",
+        payload,
+        hist,
+        keys=("J_x", "x_norm", "reg_x", "restart_x", "V_x"),
+    )
 
 
 def _paper_game(dim: int) -> QuadraticGame:
@@ -89,7 +92,6 @@ def run_selfplay(cfg: dict, T: int, radius: float, dim: int, restart: bool) -> d
             "saddle_x": sx.tolist(),
             "saddle_y": sy.tolist(),
         },
-        "hist": hist,
         "summary": {
             "max_w": max_w,
             "reg_x_T": hist["reg_x"][-1],
@@ -100,7 +102,8 @@ def run_selfplay(cfg: dict, T: int, radius: float, dim: int, restart: bool) -> d
             "G_x": metrics.G_x,
         },
     }
-    _dump(tag, payload)
+    dump_compact(f"exp3_{tag}", payload, hist)
+    print(payload["summary"])
     return payload
 
 
@@ -112,18 +115,38 @@ def run_vs_const(cfg: dict, T: int, radius: float, dim: int, restart: bool) -> d
         raise AssertionError("must not overwrite w1=0")
     e1 = np.zeros(dim, dtype=_DTYPE)
     e1[0] = 1.0
+    x_star = game.induced_minimizer_x(e1)
 
     def y_policy(_t, _x):
         return e1.copy()
 
     metrics, hist, max_w = run_loop(
-        game, px, T, y_policy=y_policy, player_y=None, observe_y=lambda _t: False, radius=radius
+        game,
+        px,
+        T,
+        y_policy=y_policy,
+        player_y=None,
+        observe_y=lambda _t: False,
+        radius=radius,
+        u_x=x_star,
     )
-    assert_saddle_comparator(game, metrics)
+    if not np.allclose(metrics.u_x, x_star):
+        raise AssertionError("vs-const comparator must be x*")
     if abs(hist["x_norm"][0]) > 1e-15:
         raise AssertionError(f"{tag}: w1 must be the origin")
     if hist["J_x"][-1] < 1:
         raise AssertionError(f"{tag}: expected J>=1 against const opponent")
+    if hist["V_x"][-1] != 0.0:
+        raise AssertionError(f"{tag}: V_x(x*) must be exactly 0, got {hist['V_x'][-1]}")
+    half = T // 2
+    # Plateau is in place by t~400. A bitwise-zero second-half drift is
+    # partly float64: once (μ/2)||x-x*||^2 underflows, the increment cannot
+    # accumulate. Do not treat 0.0 as a discrete fixed-point test.
+    drift = abs(hist["reg_x"][-1] - hist["reg_x"][half - 1]) / float(half)
+    if drift > 0.05:
+        raise AssertionError(
+            f"{tag}: Reg^x(x*) second-half drift {drift:.3g}/step; expected a plateau"
+        )
     if restart:
         if px.n_restarts < 1:
             raise AssertionError(f"{tag}: never reset")
@@ -148,23 +171,29 @@ def run_vs_const(cfg: dict, T: int, radius: float, dim: int, restart: bool) -> d
             "A": "identity",
             "mode": "restart" if restart else "warm",
             "protocol": "const e1",
+            "comparator": "induced_minimizer_x",
             "dim": dim,
             "T": T,
             "init": "origin",
             "saddle_x": sx.tolist(),
             "saddle_y": sy.tolist(),
+            "x_star": x_star.tolist(),
         },
-        "hist": hist,
         "summary": {
             "max_w": max_w,
             "reg_x_T": hist["reg_x"][-1],
+            "reg_x_half": hist["reg_x"][half - 1],
+            "second_half_drift_per_step": drift,
+            "V_x_T": hist["V_x"][-1],
             "J_x": hist["J_x"][-1],
             "n_restarts_x": px.n_restarts,
             "gamma_x": px.gamma,
             "G_x": metrics.G_x,
+            "x_star_norm": float(np.linalg.norm(x_star)),
+            "x_norm_T": hist["x_norm"][-1],
         },
     }
-    _dump(tag, payload)
+    _dump_const(tag, payload, hist)
     return payload
 
 
@@ -172,15 +201,18 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--T", type=int, default=None)
     parser.add_argument("--dim", type=int, default=10)
+    parser.add_argument("--only", choices=["selfplay", "const", "both"], default="both")
     args = parser.parse_args()
     cfg = _load_cfg()
     T = int(args.T if args.T is not None else cfg["T"])
     radius = float(cfg["gap_radius"])
     dim = int(args.dim)
-    run_selfplay(cfg, T, radius, dim, restart=False)
-    run_selfplay(cfg, T, radius, dim, restart=True)
-    run_vs_const(cfg, T, radius, dim, restart=False)
-    run_vs_const(cfg, T, radius, dim, restart=True)
+    if args.only in ("selfplay", "both"):
+        run_selfplay(cfg, T, radius, dim, restart=False)
+        run_selfplay(cfg, T, radius, dim, restart=True)
+    if args.only in ("const", "both"):
+        run_vs_const(cfg, T, radius, dim, restart=False)
+        run_vs_const(cfg, T, radius, dim, restart=True)
 
 
 if __name__ == "__main__":

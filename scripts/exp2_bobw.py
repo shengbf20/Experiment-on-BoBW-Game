@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -20,6 +19,7 @@ from games import (  # noqa: E402
     paper_saddle,
 )
 from learner import ClosedFormPlayer, run_loop  # noqa: E402
+from io_results import dump_compact  # noqa: E402
 
 _DTYPE = np.float64
 PERIOD = 200
@@ -41,11 +41,13 @@ def _player(dim: int, cfg: dict) -> ClosedFormPlayer:
     )
 
 
-def _dump(tag: str, payload: dict) -> None:
-    path = ROOT / "results" / f"exp2_{tag}.json"
-    path.write_text(json.dumps(payload), encoding="utf-8")
-    s = payload["summary"]
-    print(f"wrote {path}  {s}")
+def _dump_switch(tag: str, payload: dict, hist: dict) -> None:
+    dump_compact(
+        f"exp2_{tag}",
+        payload,
+        hist,
+        keys=("dist_x", "dist_y", "V_x", "reg_x", "J_x"),
+    )
 
 
 def run_2b(cfg: dict, T: int, radius: float) -> dict:
@@ -84,7 +86,6 @@ def run_2b(cfg: dict, T: int, radius: float) -> dict:
             "comparator": "u_star",
             "init": "origin",
         },
-        "hist": hist,
         "summary": {
             "max_w": max_w,
             "reg_x_T": hist["reg_x"][-1],
@@ -95,7 +96,13 @@ def run_2b(cfg: dict, T: int, radius: float) -> dict:
             "gamma_x": px.gamma,
         },
     }
-    _dump("G3_const", payload)
+    dump_compact(
+        "exp2_G3_const",
+        payload,
+        hist,
+        keys=("reg_x", "V_x", "G_x", "x_norm", "J_x"),
+    )
+    print(payload["summary"])
     return payload
 
 
@@ -145,6 +152,20 @@ def run_2a(cfg: dict, T: int, radius: float, dim: int = 10) -> dict:
     dist_b = float(np.linalg.norm(y_anchor - sy))
     if dist_b > ANCHOR_TOL:
         raise AssertionError(f"y_anchor not near b: ||y-b||={dist_b}")
+    v_half, v_T = hist["V_x"][half - 1], hist["V_x"][-1]
+    if v_T <= v_half:
+        raise AssertionError(f"V_x(a) should rise after switch: half={v_half}, T={v_T}")
+    dx_post = np.asarray(hist["dist_x"][half:], dtype=float)
+    dy_post = np.asarray(hist["dist_y"][half:], dtype=float)
+    if float(dx_post.max()) > 5.0 or float(dy_post.max()) > 2.5:
+        raise AssertionError(
+            f"post-switch distances exploded: max||x-a||={dx_post.max()}, max||y-b||={dy_post.max()}"
+        )
+    # J_x=1 after the switch is this instance: self-play already raised ell
+    # past post-switch chi (t=2: chi≈0.721, ell←1.442; at the switch
+    # chi≈1<1.442). A faster or larger sine can still double. Do not treat
+    # a frozen J as a general post-switch guarantee. gamma must not reset
+    # (checked above).
     payload = {
         "meta": {
             "tag": "G2_switch",
@@ -163,23 +184,29 @@ def run_2a(cfg: dict, T: int, radius: float, dim: int = 10) -> dict:
             "saddle_x": sx.tolist(),
             "saddle_y": sy.tolist(),
         },
-        "hist": hist,
         "summary": {
             "max_w": max_w,
             "reg_x_half": hist["reg_x"][half - 1],
             "reg_x_T": hist["reg_x"][-1],
-            "V_x_half": hist["V_x"][half - 1],
-            "V_x_T": hist["V_x"][-1],
+            "V_x_half": v_half,
+            "V_x_T": v_T,
+            "dist_x_half": hist["dist_x"][half - 1],
+            "dist_x_T": hist["dist_x"][-1],
+            "dist_y_half": hist["dist_y"][half - 1],
+            "dist_y_T": hist["dist_y"][-1],
+            "dist_x_post_max": float(dx_post.max()),
+            "dist_y_post_max": float(dy_post.max()),
             "J_x": hist["J_x"][-1],
             "J_y": hist["J_y"][-1],
             "t_y": hist["t_y"],
             "gamma_x": px.gamma,
+            "gamma_init": px.gamma_init,
             "G_x": metrics.G_x,
             "y_anchor_dist_b": dist_b,
             "switch_step": step,
         },
     }
-    _dump("G2_switch", payload)
+    _dump_switch("G2_switch", payload, hist)
     return payload
 
 

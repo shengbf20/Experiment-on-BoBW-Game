@@ -1,14 +1,17 @@
-"""Plot Exp.3 from saved json. Does not rerun the learner."""
+"""Plot Exp.3 from saved json/npz. Does not rerun the learner."""
 
 from __future__ import annotations
 
-import json
+import sys
 from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from io_results import load_run  # noqa: E402
 
 # Colorblind-safe (Okabe-Ito) palette; "C0"/"C1" below resolve through it.
 # fonttype 42 keeps pdf text as vector TrueType.
@@ -20,39 +23,37 @@ plt.rcParams.update(
     }
 )
 
-# Early window: one reset is visible here; full-horizon regret then runs in parallel.
+# Early window: re-climb vs warm is visible here; the origin glitch is not.
 ZOOM = 400
+JUMP_INSET = 20
 
 
-def _load(tag: str) -> dict:
-    path = ROOT / "results" / f"exp3_{tag}.json"
-    if not path.is_file():
-        raise FileNotFoundError(f"missing {path}; run exp3_restart.py first")
-    return json.loads(path.read_text(encoding="utf-8"))
+def _load(tag: str) -> tuple[dict, dict]:
+    return load_run(f"exp3_{tag}")
 
 
-def _reset_round(hist: dict) -> int | None:
+def _origin_action_round(hist: dict) -> int | None:
     rst = np.asarray(hist.get("restart_x", []), dtype=int)
     if rst.size < 2:
         return None
     jumps = np.where(np.diff(rst) > 0)[0]
     if jumps.size == 0:
         return None
-    # restart_path[0] is t=0; first increase at index k means a reset after round k.
-    return int(jumps[0])
+    # rst[0] is t=0. An increase at diff-index k means n_restarts rose after
+    # observe at round k+1. The origin is the next played action, round k+2.
+    return int(jumps[0]) + 2
 
 
 def main():
-    warm_c = _load("const_warm")
-    rst_c = _load("const_restart")
-    hw, hr = warm_c["hist"], rst_c["hist"]
+    warm_c, hw = _load("const_warm")
+    rst_c, hr = _load("const_restart")
+    x_star = warm_c.get("meta", {}).get("x_star")
+    x_star_norm = None if x_star is None else float(np.linalg.norm(x_star))
 
     tw = np.arange(len(hw["J_x"]))
     t = np.arange(1, len(hw["x_norm"]) + 1)
     z = min(ZOOM, len(t))
-    t_reset = _reset_round(hr)
-    # First played origin jump is the round after the reset.
-    t_jump = None if t_reset is None else t_reset + 1
+    t_jump = _origin_action_round(hr)
 
     fig, axes = plt.subplots(1, 3, figsize=(10.8, 3.3), layout="constrained")
 
@@ -69,19 +70,31 @@ def main():
     ax.plot(t[:z], hr["x_norm"][:z], color="C1", lw=1.4, ls="--", label="restart")
     if t_jump is not None and t_jump <= z:
         ax.axvline(t_jump, color="0.35", ls=":", lw=1.0)
+    if x_star_norm is not None:
+        ax.axhline(x_star_norm, color="0.45", ls=":", lw=0.9, label=r"$\|x^\star\|$")
     ax.set_xlabel(r"$t$")
     ax.set_ylabel(r"$\|x_t\|$")
-    ax.set_title("origin jump after one reset")
-    ax.legend(frameon=False, fontsize=8)
+    ax.set_title(r"re-climb toward $x^\star$")
+    ax.legend(frameon=False, fontsize=8, loc="upper left")
+    n_in = min(JUMP_INSET, len(t))
+    axin = ax.inset_axes([0.55, 0.10, 0.42, 0.36])
+    axin.set_facecolor("white")
+    axin.plot(t[:n_in], hw["x_norm"][:n_in], color="C0", lw=1.2)
+    axin.plot(t[:n_in], hr["x_norm"][:n_in], color="C1", lw=1.2, ls="--")
+    if t_jump is not None and t_jump <= n_in:
+        axin.axvline(t_jump, color="0.35", ls=":", lw=0.8)
+    axin.set_xlim(1.0, float(n_in))
+    axin.set_ylim(0.0, 0.18)
+    axin.set_title(rf"$t=1$ to ${n_in}$", fontsize=7, pad=1)
+    axin.tick_params(labelsize=6)
 
     ax = axes[2]
     ax.plot(t, hw["reg_x"], color="C0", lw=1.2, label="warm")
     ax.plot(t, hr["reg_x"], color="C1", lw=1.0, ls="--", label="restart")
     ax.set_xlabel(r"$t$")
-    ax.set_ylabel(r"$\mathrm{Reg}^x(a)$")
-    ax.set_title("constant gap, parallel tails")
-    ax.legend(frameon=False, fontsize=8, loc="lower left")
-    # Inset: the gap opens within the first ZOOM rounds, invisible at full scale.
+    ax.set_ylabel(r"$\mathrm{Reg}^x(x^\star)$")
+    ax.set_title(r"regret at $x^\star$: constant offset")
+    ax.legend(frameon=False, fontsize=8, loc="lower right")
     axin = ax.inset_axes([0.44, 0.52, 0.53, 0.42])
     axin.plot(t[:z], hw["reg_x"][:z], color="C0", lw=1.2)
     axin.plot(t[:z], hr["reg_x"][:z], color="C1", lw=1.0, ls="--")

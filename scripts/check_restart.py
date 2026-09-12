@@ -53,6 +53,7 @@ def test_origin_jump_vs_const():
     game = QuadraticGame(dim=dim, mu=0.2, saddle_x=sx, saddle_y=sy)
     e1 = np.zeros(dim, dtype=_DTYPE)
     e1[0] = 1.0
+    x_star = game.induced_minimizer_x(e1)
 
     def y_policy(_t, _x):
         return e1.copy()
@@ -60,8 +61,12 @@ def test_origin_jump_vs_const():
     kwargs = dict(epsilon=1.0, beta0=1.0, ell1=1.0e-3, adaptive=True)
     pw = ClosedFormPlayer(dim, restart=False, **kwargs)
     pr = ClosedFormPlayer(dim, restart=True, **kwargs)
-    _, hw, _ = run_loop(game, pw, T, y_policy=y_policy, observe_y=lambda _t: False)
-    _, hr, _ = run_loop(game, pr, T, y_policy=y_policy, observe_y=lambda _t: False)
+    _, hw, _ = run_loop(
+        game, pw, T, y_policy=y_policy, observe_y=lambda _t: False, u_x=x_star
+    )
+    _, hr, _ = run_loop(
+        game, pr, T, y_policy=y_policy, observe_y=lambda _t: False, u_x=x_star
+    )
     if hw["J_x"][-1] < 1 or hr["J_x"][-1] < 1:
         raise AssertionError("expected a doubling against y=e1")
     if pr.n_restarts != hr["J_x"][-1]:
@@ -75,6 +80,8 @@ def test_origin_jump_vs_const():
         raise AssertionError("warm should not jump to the origin at t=3")
     if abs(pw.gamma - pw.gamma_init) > 0.0:
         raise AssertionError("warm gamma moved")
+    if hw["V_x"][-1] != 0.0 or hr["V_x"][-1] != 0.0:
+        raise AssertionError("V_x(x*) must be 0 against y≡e1")
 
 
 def main():

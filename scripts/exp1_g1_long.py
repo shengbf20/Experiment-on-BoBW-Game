@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import json
+import argparse
 import sys
 from pathlib import Path
 
@@ -13,15 +13,15 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from games import BilinearGame, paper_saddle  # noqa: E402
+from io_results import LONG_STRIDE, dump_compact  # noqa: E402
 from learner import ClosedFormPlayer  # noqa: E402
 from metrics import RunningMetrics  # noqa: E402
 
 _DTYPE = np.float64
+LONG_KEYS = ("Q", "gap", "reg_x")
 
 
 def main():
-    import argparse
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--T", type=int, default=200000)
     parser.add_argument("--dim", type=int, default=10)
@@ -37,9 +37,11 @@ def main():
     if args.seed is None:
         game = BilinearGame(dim=dim, saddle_x=sx, saddle_y=sy)
         tag = "G1_identity_long"
+        a_kind = "identity"
     else:
         game = BilinearGame.gaussian(dim=dim, seed=int(args.seed), saddle_x=sx, saddle_y=sy)
         tag = f"G1_gaussian_seed{int(args.seed)}_long"
+        a_kind = "gaussian-spectral"
     kwargs = dict(
         epsilon=float(cfg["epsilon"]),
         beta0=float(cfg["beta0"]),
@@ -90,18 +92,18 @@ def main():
 
     checkpoints = [k for k in (2_000, 20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000) if k <= T]
     summary = {
-        "T": T,
         "max_w": max_w,
         "reg_x_T": float(reg_x[-1]),
+        "reg_y_T": float(metrics.reg_y),
         "Q_T": float(Q[-1]),
         "dQ_T": float(dQ[-1]),
         "gap_T": float(gap[-1]),
         "radius_T": float(radius[-1]),
         "phi_max_abs": float(np.max(np.abs(phi))),
-        "J_x": px.J,
-        "J_y": py.J,
-        "beta_x": px.beta,
-        "beta_y": py.beta,
+        "J_x": int(px.J),
+        "J_y": int(py.J),
+        "beta_x": float(px.beta),
+        "beta_y": float(py.beta),
         "dQ_mean_last_10pct": float(dQ[int(0.9 * T) :].mean()),
         "dQ_mean_last_1pct": float(dQ[int(0.99 * T) :].mean()),
         "checkpoints": {
@@ -114,23 +116,29 @@ def main():
             for k in checkpoints
         },
     }
-    npz = ROOT / "results" / f"exp1_{tag}.npz"
-    np.savez_compressed(
-        npz,
-        t=np.arange(1, T + 1, dtype=np.int64)[::10],
-        Q=Q[::10],
-        dQ=dQ[::10],
-        gap=gap[::10],
-        reg_x=reg_x[::10],
-        radius=radius[::10],
-        stride=np.array([10]),
-        T=np.array([T]),
+    meta = {
+        "tag": tag,
+        "game": "G1",
+        "A": a_kind,
+        "T": T,
+        "dim": dim,
+        "init": "origin (paper w1=0)",
+        "saddle_x": sx.tolist(),
+        "saddle_y": sy.tolist(),
+        "stride": LONG_STRIDE,
+    }
+    if args.seed is not None:
+        meta["seed"] = int(args.seed)
+    payload = {"meta": meta, "summary": summary, "T": T}
+    dump_compact(
+        f"exp1_{tag}",
+        payload,
+        {"Q": Q, "gap": gap, "reg_x": reg_x},
+        extra_arrays={"dQ": dQ, "radius": radius},
+        keys=LONG_KEYS,
+        stride=LONG_STRIDE,
     )
-    out = ROOT / "results" / f"exp1_{tag}.json"
-    out.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    print(f"wrote {out}")
-    print(f"wrote {npz}")
-    print(json.dumps(summary, indent=2))
+    print(summary)
 
 
 if __name__ == "__main__":

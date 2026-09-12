@@ -4,7 +4,7 @@
 - **A. 对当前正文的弱声称**（Numerical Illustrations，不宣称优于已有算法）；
 - **B. 对更强的经验叙事**（unknown-\(L_F\) 系统适应、\(V_T\) 插值、相对 Hsieh 的算法优势）。
 
-A 已基本站得住；B 尚未开始。下面「该修的图」服务 A；**建立 Hsieh baseline** 与 \(L_F\)/\(V_T\) sweep 服务 B。
+A 已基本站得住；B 中 Hsieh、\(L_F\) sweep 与 \(V_T\) 插值已落地。下面「该修的图」服务 A；**建立 Hsieh baseline** 与 \(L_F\)/\(V_T\) sweep 服务 B。
 
 ------------------------------------------------------------------------
 
@@ -12,10 +12,10 @@ A 已基本站得住；B 尚未开始。下面「该修的图」服务 A；**建
 
    * 代码实现与 D005 / `thm:t006` 总体一致；更新顺序、warm 不重置、clipping、\(\gamma\) 冻结、指标定义基本正确。
    * 初始化已经干净：投稿实例为 \((a,b)=(0.4 e_1,0.4 e_2)\)，脚本禁止覆盖 `action`，并断言 \(\|w_1\|=0\) 且第 2 步离开原点。
-   * 作为理论论文的 **Numerical Illustrations**，当前三张主图已经能支撑正文的弱声称（self-play 平台、有限加倍、\(V=0\) fallback、same-run 不重置）。
-   * 尚未覆盖的是卖点的**系统**验证：unknown-\(L_F\) 随尺度变化、comparator-local 随 \(V_T\) 变化、相对 Hsieh 的**算法**（而非上界）优势。
-   * 主文读图上更急的是 **Exp.2 / Exp.3 在非 self-play 上仍用鞍点算 regret**（大负值）。叙事上仍然缺一条 **literature baseline**：现在只有 cold restart，那是 ablation，不是 Hsieh。
-   * 因此：不是「实验做错了」，而是「插图体裁已对齐、有两张图 comparator 选错、还没有建立可投稿的算法对照」。
+   * 作为理论论文的 **Numerical Illustrations**，三张主图加附录已对齐正文弱声称（self-play 平台、有限加倍、\(V=0\) fallback、same-run 不重置、unknown-\(L_F\) 与 \(V_T\) 指向附录）。
+   * Hsieh 对照已经接到 G3 / switch，但 G3 上**双方都饱和**，不能当成 realized-regret 优势。Step 18 已把这条写进正文第四段与 limitations。
+   * 主文读图上更急的 **Exp.2 负 regret / Exp.3 对鞍点累计** 已由 Step 11–12 修掉。Hsieh OptDA 已作为 literature baseline 接入 Figure 2 右（\(\tau=1\)，未拟合）。
+   * 因此：插图体裁已对齐、comparator / 纵轴已修好、Hsieh 实现通过 G2 self-play 平台体检。经验 BoBW 优势仍未成立，因为 G3 上 Hsieh 也饱和。`PLAN.md` 完成判据表已勾满。
 
 2. **目前做得比较好的地方**
 
@@ -23,25 +23,26 @@ A 已基本站得住；B 尚未开始。下面「该修的图」服务 A；**建
    * 有 SPEC、不变量、smoke（\(w_1\)、\(J\ge 1\) 后半冻结、G3 的 \(V\equiv 0\) 与 \(G_T\in[1,3]\)）。过程严谨性高于「只有几条曲线」。
    * **Exp.1 / Thm.t006.B：** G2 上 regret 平台约 5，\(Q_t^{\mathrm{obs}}\) 冻在约 0.029，restricted gap 与 \(1/t\) 同形。G1 identity 的 regret 恒 0 是 \(\Phi\equiv 0\) 的结构退化，正文已承认；\(T=2\times 10^5\) 后 \(Q\to 0.343\)。谱归一化 Gaussian 附录补上非平凡 G1 regret。
    * **Exp.2-right / Thm.t006.C：** G3 很干净：\(V_T(u^\star)=0\)，\(G_T=\Theta(1)\)，regret 平台约 80，无 \(\sqrt{t}\) 趋势。
-   * **Exp.3 机制：** \(J=1\) 后冻结；restart 在 \(t=3\) 回原点再爬向 \(\|x^\star\|\approx 5\)；正文不声称 \(\sqrt{K}\) 税。作为 ablation 方向正确。
-   * 正文表述与实验匹配：不画其他算法、不写 superiority。第 6 节的措辞仍然适用。
+   * **Exp.3 机制：** \(J=1\) 后冻结；restart 在 \(t=3\) 回原点再爬向 \(\|x^\star\|\approx 5\)；对 \(x^\star\) 的 regret 饱和（warm \(\approx 77\)，restart \(\approx 171\)，常数偏移）；正文不声称 \(\sqrt{K}\) 税。作为 ablation 方向正确。
+   * **Exp.2-left / Thm.t006.D：** 连续 slow switch；主曲线为 \(\|x_t-a\|\)、\(\|y_t-b\|\) 与 \(V_t^x(a)\)（负 \(\mathrm{Reg}^x(a)\) 不再当主曲线）。切换后距离有界，\(V\) 在竖线后升起，\(\gamma\) 不重置。
+   * 正文表述与实验匹配：G3 已叠加 Hsieh OptDA；双方饱和，比较仍限制为 theorem statements plus 如实报告。第 6 节已点明这一点。
 
    G3 的 claim 边界（必须写进评价，避免过读）：
 
    * 它分离的是 **theorem 上界 vs theorem 上界**（\(\widetilde O(1)\) vs \(O(G\sqrt{T})\)），不是旧算法真实 regret 的 \(\Omega(\sqrt{T})\)。
    * \(y_t\equiv 1\) 使诱导损失完全 stationary，故对一切固定 \(u\) 都有 \(V_T(u)=0\)，例子偏「容易」。
-   * 作为投稿用 separation：**够用**。作为「单独消除 incremental 质疑」：**不够**。下一刀应是非平稳对手、观测 variation 大、但 \(V_T(u^\star)=O(1)\)。
+   * 作为投稿用 separation：**够用**。17b 补了非平稳且 \(V_T(u^\star)=O(1)\) 的路径；Hsieh 在该路径上跟踪，静态 regret 为负，仍**不能**改口 realized \(\Omega(\sqrt{T})\)。
 
 3. **目前最主要的问题**（按对当前主文的伤害排序）
 
-   * **Exp.3 comparator 选错（主文 Figure 3 右图）。** 对手 \(y\equiv e_1\)，诱导最小点是 \(x^\star=a-A(e_1-b)/\mu\)（\(A=I\) 时 \(\approx -4.6 e_1+2 e_2\)），中图 \(\|x_t\|\) 已在朝它走，regret 却仍对鞍点 \(a\) 累计，线性落到约 \(-6\times 10^4\)。平行偏移能看见，但 reviewer 会先问负几万是什么。改成 \(\mathrm{Reg}^x(x^\star)\) 后：\(V_T(x^\star)=0\)，曲线应饱和——同时修好读图，并在高维 G2 上再做一次 fallback 插图。这是最高优先级、最低成本。
-   * **Exp.2-left 负 regret 被误当成 fallback 图。** 切换后 \(\mathrm{Reg}^x(a)\) 从约 \(+5\) 掉到约 \(-45\)。当前协议是**故意温和的**连续慢正弦（从靠近 \(b\) 的 self-play 动作接着振），用来画 Thm.t006.D（同一状态、不检测、不重置），不是 fallback 压力测试。Fallback 的实证担子在 G3。负值不是实现错误（单侧 regret 可以为负），而是 **same-run 图用错了纵轴**。应改画距离 / \(V_t\) / 状态连续性，或换切换后仍可读的 comparator；不要再把这张图写成「验证了 fallback rate」。
-   * **unknown-\(L_F\) 只有存在性。** 主实例 \(A=I\) 或谱归一化 Gaussian（\(\|A\|_2=1\)），光滑尺度几乎不变。Exp.3 的 \(J=1\) 是最弱 doubling 插图：\(\ell_1=10^{-3}\)、\(L\sim 1\) 时计数上界约 10 次，路径上 \(\chi\ll L_F\)。Gaussian 附录**不是** \(L_F\) sweep。
-   * **\(V_T(u)\) 只有 \(V=0\) 端点。** 没有幅度 / 频率插值，也没有「观测 variation 大但 \(V(u^\star)=O(1)\)」的非平稳例子。
-   * **rate 主要靠单条曲线和参考斜率。** 没有不同 horizon 的终端表。G1 长跑脚本已有 checkpoint 逻辑，G2 的 \(T=2\times 10^4\) json 含全程 hist，多数表可以**抽已有 run**，不必重设计。
-   * **没有 literature baseline（当前实验的结构性缺口）。** 对照只有 cold restart，属于 Remark cold 的 mechanism ablation，不能替代已有算法。正文与 Hsieh et al. (2021) 的比较停在 theorem statements（`app:separation`）。要回答「同一条轨迹上 fallback 是否真的更好」，必须把 Hsieh（或其论文中 \(O(G\sqrt{T}+G^2)\) 的 optimistic last-gradient 更新）接到 **同一套游戏、同一反馈、同一 comparator** 上。有价值的对照是 **G3 以及 switch 上的真实 regret**，不是 self-play 并排画两个 \(O(1)\) 平台。实现必须对拍原文；错 baseline 比没有更伤。
+   * **Exp.3 comparator 选错：** **已由 Step 11 修掉。** vs \(y\equiv e_1\) 现对诱导最优 \(x^\star\) 累计，\(V_T(x^\star)=0\)，两曲线饱和后差一个常数。
+   * **Exp.2-left 负 regret 被误当成 fallback 图：** **已由 Step 12 修掉。** 主曲线改为距离与 \(V_t^x(a)\)；协议仍是连续慢正弦；claim 只讲 part D。
+   * **unknown-\(L_F\) 只有存在性：** **已由 Step 16 补 \(A=cI\) sweep（禁止谱归一化）。** \(J=1\) 对所有 \(c\)；\(\ell_T,\beta_T\) 随 \(c\) 递增。大 \(c\) 上 \(Q\) 立即冻住、regret 平台晚到（加大 \(T\)），不是 \(\sqrt{T}\)。Gaussian 附录仍然不是 \(L_F\) sweep。
+   * **\(V_T(u)\) 只有 \(V=0\) 端点：** **已由 Step 17 补。** 17a：G2 正弦幅度扫，\(\mathrm{LinReg}\) 随 \(\sqrt{V}\) 在 \(\eta\le 0.4\) 上升，更大 \(\eta\) 开始跟踪。17b：G3 非平稳 \(T_{\mathrm{per}}=\sqrt{T}\)，\(V_T\approx 4.93=O(1)\)，路径长 \(\approx 283\)，D005 平台约 \(58.5\)。Hsieh 同路径跟踪至 \(-986\)，禁止写成 \(\Omega(\sqrt{T})\)。
+   * **rate 主要靠单条曲线和参考斜率：** **已由 Step 15 补终端表。** G2 的 \(\mathrm{Reg},Q\) 从 \(T=5\times10^3\) 起冻结；G1 的 \(Q\) 在 \(10^5\) 后冻结。G2 上 \(T\cdot\mathrm{Gap}_T\) 随 \(T\) 加倍而减半（快于 \(1/T\)，不另声称指数）。
+   * **没有 literature baseline：** **已由 Step 13 落实 Hsieh OptDA。** G2 self-play 平台（实现有效）。G3 上 D005 \(\approx 80\)、Hsieh \(\approx 1.2\)，**双方饱和**；switch 上两条距离都有界。禁止把这解读成 realized \(\Omega(\sqrt{T})\)，也禁止把 self-play 两平台并排当 BoBW。
    * **闭式贡献没有实验。** `check_closedform.py` 只验证 `radial_q` 可逆与数值稳定，并不独立求解 FTRL argmin。\(O(d)\) 是理论卖点，实验空白；可保持省略，但不要写成「已经对拍过闭式更新」。
-   * **复现性：内部合同齐，对外入口弱。** 已有 `SPEC.md`、`PLAN.md`、`configs/default.yaml` 和分实验脚本。缺 README / 一键入口。外层仓库 gitignore 了整个 `experiment/`；`results/*.json` 把整条 \(T=2\times 10^4\) 轨迹打进去（单文件数 MB 至数十 MB）。应改 compact summary + npz，而不是再堆一份 raw dump。
+   * **复现性：内部合同齐，对外入口已补。** `SPEC.md`、`PLAN.md`、`configs/default.yaml`、`experiment/README.md`。新 run 写 compact summary + npz；旧的数 MB 全程 json 已剥离。外层仓库仍 gitignore 整个 `experiment/`。
 
 4. **不要再列为待办**
 
@@ -49,7 +50,7 @@ A 已基本站得住；B 尚未开始。下面「该修的图」服务 A；**建
    * 把 warm vs restart 误写成 literature baseline：继续当 ablation；literature baseline 由 Step 13 落实 Hsieh。
    * 把 Exp.2-left 升级成不连续压力测试：不采纳。Fallback 走 G3 + Hsieh，以及修好 comparator 后的 Exp.3 vs-const。
 
-5. **必须全部落实的条目**（= `PLAN.md` Step 11–18，无子集闭环）
+5. **必须全部落实的条目**（= `PLAN.md` Step 11–18，**已全部落实**）
 
    1. Exp.3：vs-const 的 comparator 改为诱导最优 \(x^\star\)。
    2. Exp.2-left：换纵轴 / 补 \(V_t\) 或距离，去掉大负 regret 作为主曲线。
@@ -73,39 +74,37 @@ A 已基本站得住；B 尚未开始。下面「该修的图」服务 A；**建
 7. **最终评级**
 
    * 实现正确性：**约 4.5/5**（初始化那条删除；闭式对拍不是独立 FTRL 验证）。
-   * theorem illustration：**约 4.2/5**（B 完整，C 有干净端点，D 有 same-run，A 只有 \(J=1\)）。
+   * theorem illustration：**约 4.4/5**（B 完整，C 有干净端点，D 有 same-run，A 有 \(A=cI\) 尺度扫、路径上仍是 \(J=1\)）。
    * 实验过程严谨性：**偏高**（SPEC / 不变量 / smoke）。短板在设计和读图，不在工程草率。
-   * 实验全面性：**仍不足**（缺 literature baseline，其次才是 \(L_F\) / \(V_T\) sweep）。
-   * 对当前正文弱声称：**已能支撑**（前提是继续不画其他算法）。
-   * 对 BoBW superiority 的**经验证据**：**约 2.5/5**（没有第二条算法曲线，证据只能停在上界分离）。
-   * 作为 Numerical Illustrations：**已有可用骨架，先修 comparator / 纵轴。**
-   * 作为带对照的 ICLR 实验节：**必须先做第 5 节第 3 项（Hsieh），且实现要经得起对拍。**
+   * 实验全面性：**PLAN 完成判据表已齐。**
+   * 对当前正文弱声称：**已能支撑。**
+   * 对 BoBW superiority 的**经验证据**：**约 3/5**（有第二条算法曲线，但 G3 上 Hsieh 也饱和，证据仍主要是上界分离）。
+   * 作为 Numerical Illustrations：**comparator / 纵轴 / Hsieh 对照 / horizon 表 / \(L_F\) sweep / \(V_T\) 已接到正文或附录。**
+   * 作为带对照的 ICLR 实验节：**Hsieh 已实现且通过 self-play 体检；G3 不能写成 realized-regret 优势。**
 
 最关键的一句话：
 
-**当前实验已经能够说明「实现正确、self-play / 有限加倍 / \(V=0\) fallback 这些理论现象会出现」，正文的弱声称站得住。它还没有第二条学习器：cold restart 不是 literature baseline。要回答相对 Hsieh 的算法优势，必须新建 Hsieh (2021) 对照（先 G3）。另外，Exp.2 / Exp.3 用鞍点算非 self-play regret，已经在主图里造成大负值，修 comparator / 纵轴应放在对照曲线之前，否则 Hsieh 也会画在错误的纵轴上。**
+**`PLAN.md` 完成判据表已勾满。实验说明实现正确，以及 self-play / 有限加倍 / \(V=0\) fallback / same-run 不重置 / unknown-\(L_F\) / \(V_T\) 这些现象会出现，并且有一条对拍过的 Hsieh OptDA 曲线。G3 上双方都饱和，相对 Hsieh 的算法优势仍然只在 theorem statements。不得声称 comprehensively validate superiority。**
 
 ------------------------------------------------------------------------
 8. **落地步骤**
 
-执行合同以 **`PLAN.md` §6 与 `SPEC.md` 为准**。Step 11–18 **全部必做**，没有最小闭环、没有「视需要」、没有「可选附录」。做完后第 5 节每一条都必须已落实（见 `PLAN.md` 完成判据表）。
+执行合同以 **`PLAN.md` §6 与 `SPEC.md` 为准**。Step 11–18 **已全部完成**。
 
-下面与 `PLAN.md` §6 对齐，避免两份文档再分叉：
+**Step 11.（已完成）** Exp.3 vs-const comparator \(\to x^\star=a-A(e_1-b)/\mu\)。\(\mathrm{Reg}^x(x^\star)\) 饱和。改 Figure 3。
 
-**Step 11.** Exp.3 vs-const comparator \(\to x^\star=a-A(e_1-b)/\mu\)。\(\mathrm{Reg}^x(x^\star)\) 饱和。改 Figure 3。
+**Step 12.（已完成）** Exp.2-left 主曲线改为 \(\|x_t-a\|\)、\(\|y_t-b\|\)、\(V_t^x(a)\)。协议（连续 slow switch）不变。
 
-**Step 12.** Exp.2-left 主曲线改为 \(\|x_t-a\|\)、\(\|y_t-b\|\)、\(V_t^x(a)\)。协议（连续 slow switch）不变。
+**Step 13.（已完成）** `src/hsieh.py`：G3 主对照、G2 switch、G2 self-play 体检。G3 双方饱和，已写入 limitations。Restart 不是 baseline。
 
-**Step 13.** `src/hsieh.py`：G3 主对照、G2 switch、G2 self-play 体检。删 “no other algorithm is shown”。Restart 不是 baseline。
+**Step 14.（已完成）** `experiment/README.md` + compact summary json / npz。
 
-**Step 14.** `experiment/README.md` + compact summary json / npz。
+**Step 15.（已完成）** Multi-horizon 表（G2 与 G1 \(Q\) checkpoint），进附录。
 
-**Step 15.** Multi-horizon 表（G2 与 G1 \(Q\) checkpoint），进附录。
+**Step 16.（已完成）** \(L_F\) sweep：\(A=cI\)，\(c\in\{0.25,0.5,1,2,4,8\}\)，禁止谱归一化。
 
-**Step 16.** \(L_F\) sweep：\(A=cI\)，\(c\in\{0.25,0.5,1,2,4,8\}\)，禁止谱归一化。
+**Step 17.（已完成）** \(V_T\)：17a 幅度扫频与 17b 非平稳 \(V(u^\star)=O(1)\) 都做。
 
-**Step 17.** \(V_T\)：**17a 幅度扫频与 17b 非平稳 \(V(u^\star)=O(1)\) 都做**。
+**Step 18.（已完成）** 改 `experiments.tex` / `appendix_experiments.tex`，覆盖第 5 节全部条目。
 
-**Step 18.** 改 `experiments.tex` / `appendix_experiments.tex`，覆盖第 5 节全部条目。
-
-未勾满 `PLAN.md` 完成判据表，不得声称实验闭环完成。
+`PLAN.md` 完成判据表已勾满。不得把 G3 写成 realized-regret 优势。

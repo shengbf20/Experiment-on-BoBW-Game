@@ -13,3 +13,6 @@ adaptive: false
 mode: warm
 
 gap_radius: 1.0
+
+# Hsieh 2021 OptDA (Adapt): paper's free player-specific τ. Not fitted to D005.
+hsieh_tau: 1.0

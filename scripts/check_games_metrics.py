@@ -136,6 +136,25 @@ def test_shifted_saddle_and_origin_gradient():
         _assert_close(m.u_y, sy, f"{game.name} metrics u_y")
 
 
+def test_g2_induced_minimizer_vs_const():
+    dim = 10
+    sx, sy = paper_saddle(dim)
+    game = QuadraticGame(dim=dim, mu=0.2, saddle_x=sx, saddle_y=sy)
+    e1 = np.zeros(dim)
+    e1[0] = 1.0
+    x_star = game.induced_minimizer_x(e1)
+    expected = sx - (game.A @ (e1 - sy)) / game.mu
+    _assert_close(x_star, expected, "x* formula")
+    gx = game.grad_x_phi(x_star, e1)
+    _assert_close(gx, 0.0, "∇xΦ(x*, e1)")
+    m = RunningMetrics(game, u_x=x_star, radius=1.0)
+    for _ in range(20):
+        m.step(np.zeros(dim), e1)
+    if m.V_x != 0.0:
+        raise AssertionError(f"V_x(x*) must be 0 against y≡e1, got {m.V_x}")
+    _assert_close(m.u_x, x_star, "metrics u_x is x*")
+
+
 def test_shifted_g1_gap_and_gaussian_norm():
     sx, sy = paper_saddle(2)
     game = BilinearGame(dim=2, A=np.eye(2), saddle_x=sx, saddle_y=sy)
@@ -156,6 +175,7 @@ def main():
     test_g1_gap_and_linreg_identity()
     test_g2_gap_unconstrained_and_boundary()
     test_shifted_saddle_and_origin_gradient()
+    test_g2_induced_minimizer_vs_const()
     test_shifted_g1_gap_and_gaussian_norm()
     print("games + metrics checks passed")
 
