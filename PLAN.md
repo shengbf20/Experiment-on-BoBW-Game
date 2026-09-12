@@ -1,9 +1,12 @@
 # 实验方案（flagship = `thm:t006` / D005）
 
-实验是插图，不是主结果。对准 ICLR / ICML 主文约 1 页、2–3 张图。COLT 不跑。AISTATS 可只做 Exp.1+2。
+编码合同：`SPEC.md`。评价与完成勾选：`reflection.txt`。执行顺序：本文 §6，**Step 11–18 全部必做**，做完后 `reflection.txt` 第 5 节每一条都必须落实。
 
-**只实现一条主算法：** unknown-\(L_F\) + closed-form + warm rescaling（正文 Sec. 5.1）。  
-对照只保留 **cold restart**。不做 Hsieh、不做隐式根、不扫四层算法。本轮对齐也不加任何新 baseline；若审稿人之后要求比较，再单独加 Hsieh。
+**主算法：** unknown-\(L_F\) + closed-form + warm rescaling（正文 Sec. 5.1 / D005）。  
+**Literature baseline（必做）：** Hsieh et al. (2021)，`src/hsieh.py`。  
+**机制 ablation：** cold restart（Exp.3）。Restart **不是** literature baseline，不能代替 Hsieh。
+
+对准 ICLR / ICML 主文约 1–2 页加附录表。COLT 不跑。
 
 ---
 
@@ -11,15 +14,19 @@
 
 | 要看的 | 对应 | 不要看的 |
 |---|---|---|
-| Self-play 下固定 comparator 的累计 regret 进入平台 | Thm 4.B | last-iterate 收敛 |
+| Self-play 下固定 comparator 的累计 regret 进入平台 | Thm.t006.B | last-iterate 收敛 |
 | 平均对局的 restricted gap \(\sim 1/T\) | Cor. gap | 全域 gap |
 | \(Q_t^{\mathrm{obs}}\) 饱和 | movement control | 显式常数 \(\bar Q\)、32/64 是否紧 |
-| 同一状态、不检测、对手切换后仍可用 | Thm 4.D | 任意对手下界 |
-| 分离例上 \(V_T(u^\star)=0\)，regret 不跟 \(\sqrt T\) 走 | App. A + fallback | “真实 regret 是 \(\Omega(\sqrt T)\)” |
+| 同一状态、不检测、对手切换后仍可用 | Thm.t006.D | 把负 \(\mathrm{Reg}^x(a)\) 当成 fallback 验证 |
+| 分离例上 \(V_T(u^\star)=0\)，D005 regret 不跟 \(\sqrt T\) 走 | App. A + fallback | 在未跑 Hsieh 前声称别人 \(\Omega(\sqrt T)\) |
+| D005 vs Hsieh 在 G3 / switch 上的**真实** regret | BoBW 经验对照 | 用 cold restart 冒充 literature baseline |
 | \(\ell_t\) 有限次加倍后冻结；restart 轨迹不连续 | Claim 64 + Remark cold | restart 的信息论 \(\sqrt{K}\) 下界 |
-| 闭式每轮 \(O(d)\) | Thm 4.A | 有限精度 bit complexity |
+| doubling 次数 / 终值 \(\ell,\beta\) 随 \(\|A\|\) 变化 | unknown-\(L_F\) | 把谱归一化 Gaussian 当成 \(L_F\) sweep |
+| regret 随 \(\sqrt{V_T(u)}\) 变化；非平稳且 \(V(u^\star)=O(1)\) | comparator-local 适应 | 只保留 \(V=0\) 端点 |
+| 多 horizon 终端统计 | \(O(1)\)、\(O(1/T)\) | 只靠单条曲线目测斜率 |
+| 闭式每轮 \(O(d)\) | Thm.t006.A | 有限精度 bit complexity；runtime 表不是本轮必做 |
 
-失败处理见 §7。图不好看就撤图，改纯理论投稿。
+失败处理见 §7。对照图失败则先修实现，禁止带着坏 Hsieh 投稿。
 
 ---
 
@@ -29,14 +36,16 @@
 
 ```
 experiment/
-  PLAN.md
-  SPEC.md                 # Step 0：D005 更新顺序与不变量
+  PLAN.md                 # 本文件：实验设计 + 必做落地步骤
+  SPEC.md                 # D005 / Hsieh / comparator 合同
+  reflection.txt          # 评价；第 5 节条目必须由 §6 全部落实
+  README.md               # Step 14 补
   requirements.txt
-  src/                    # Step 1 起写 games.py / metrics.py
+  src/                    # games.py / metrics.py / learner.py / hsieh.py
   configs/default.yaml
   scripts/
-  results/                # 不进 git
-  figures/                # 定稿后再考虑进 git
+  results/                # compact summary json + npz，不进 git
+  figures/
 ```
 
 依赖：`numpy`、`matplotlib`、`pyyaml`。不需要 GPU。
@@ -202,14 +211,18 @@ w_t=
 
 **Warm 永不重置** FTRL 累加器、clipping、\(\zeta\)、动作。
 
-### 3.5 Cold restart（唯一对照）
+### 3.5 Cold restart（机制 ablation，不是 literature baseline）
 
 与 D005 相同的 \(\chi,\ell,\beta\) 规则；一旦 \(\chi_t>\ell_t\)，除 \(\ell,\beta,\epsilon\) 外全部清零：
 
 - \(w\leftarrow 0\)，累加器、\(h\)、\(\zeta\) 清零；
 - clipping 按**新的** \(\beta_+\) 重初始化：\(\gamma_+\leftarrow\epsilon\beta_+\)，\(\widehat M=\gamma_+\)，\(B=4\)，\(\overline V=4\gamma_+^2\)，\(\alpha\) 重算。
 
-这对应 Remark cold，不是主算法。图注写明。
+这对应 Remark cold，不是主算法，也不是 Hsieh。图注写明。
+
+### 3.6 Hsieh (2021)（literature baseline，必做）
+
+见 `SPEC.md`「Hsieh (2021) literature baseline」。`src/hsieh.py` 独立实现。主对照 G3 与 G2 switch；G2 self-play 只作实现体检。
 
 ---
 
@@ -217,7 +230,11 @@ w_t=
 
 对玩家 \(i\in\{x,y\}\)：
 
-- \(\operatorname{Reg}_t^i(u_i)=\sum_{s\le t}(\Phi\text{ 差})\)。G1/G2：**禁止**传入 `u_x`/`u_y` 覆盖；`RunningMetrics` 必须用 `game.saddle()`（即 \((a,b)\)），跑完后 `assert allclose(u_x,a)` 与 `allclose(u_y,b)`。G3 是唯一例外：X 用 \(u^\star=-1/\sqrt{3}\)，不是鞍点。图例 G1/G2 写 \(\mathrm{Reg}^x(a),\mathrm{Reg}^y(b)\)，G3 写 \(\mathrm{Reg}^x(u^\star)\)；禁止残留 \(\mathrm{Reg}^x(0)\)。
+- \(\operatorname{Reg}_t^i(u_i)=\sum_{s\le t}(\Phi\text{ 差})\)。Comparator 按 `SPEC.md` 协议第 7 条：
+  - G1/G2 **self-play**：必须 `game.saddle()`，跑完断言 \(u_x=a\)、\(u_y=b\)。图例 \(\mathrm{Reg}^x(a),\mathrm{Reg}^y(b)\)。
+  - G2 **vs-const**：必须 \(u_x=x^\star=a-A(e_1-b)/\mu\)（`induced_minimizer_x`），断言 \(V_x(x^\star)=0\)。图例 \(\mathrm{Reg}^x(x^\star)\)。
+  - G3：\(u^\star=-1/\sqrt{3}\)。图例 \(\mathrm{Reg}^x(u^\star)\)。
+  - 禁止残留 \(\mathrm{Reg}^x(0)\)。禁止把 self-play 的鞍点断言套到 vs-const / Hsieh-G3 上。
 - \(\operatorname{LinReg}_t^i(u_i)=\sum_{s\le t}\langle g_s^i,w_s^i-u_i\rangle\)。
 - \(Q_t=\sum_{s<t}\|z_{s+1}-z_s\|^2\)。
 - \(G_t^i=\max_{s\le t}\|g_s^i\|\)。
@@ -230,109 +247,177 @@ w_t=
 
 ---
 
-## 5. 三个实验
+## 5. 实验（含已完成的三张主图 + 必做增补）
 
-默认 \(T=2\times 10^4\)。主图 \(A=I\) **单次运行**（确定性，不画均值带）。高斯 \(A\) 的 3 个 seed 只进附录，spectral-normalized，三条线分开画。**禁止** off-saddle probe：第 1 轮必须是算法给出的 \(w_1=0\)。
+默认 \(T=2\times 10^4\)。主图 \(A=I\) **单次运行**（确定性，不画均值带）。高斯 \(A\) 的 3 个 seed 只进附录，spectral-normalized，三条线分开画。**禁止** off-saddle probe：第 1 轮必须是算法给出的 \(w_1=0\)。新 run 只写 compact summary + npz。
 
-### Exp.1 Self-play 常值 regret（主文 Figure 1）
+### Exp.1 Self-play 常值 regret（主文 Figure 1；已完成，本轮不改协议）
 
 - 游戏：shifted G1、G2，\(A=I\)，\((a,b)=(0.4 e_1,0.4 e_2)\)。
-- 协议：双方 D005，\(w_1=0\)。
-- 图（一行三列）：累计 \(\operatorname{Reg}_t^x(a),\operatorname{Reg}_t^y(b)\)；log-log restricted gap；\(Q_t\)。G2 主图 \(T=2\times10^4\)。G1 双线性 last-iterate 螺旋在该窗口内 \(Q\) 仍升，主图 G1 行用 \(T=2\times10^5\)（诊断：\(Q\to 0.343\)，末段 \(dQ\sim 10^{-10}\)）。
-- G1 + \(A=I\) 的 regret 沿轨迹恒为 0（\(\Phi\equiv 0\)）；非平凡 G1 regret 只在 Gaussian 附录。
-- 可加一条 \(\sqrt t\) 虚线，**不要**写成 SOTA 对比。
+- 协议：双方 D005，\(w_1=0\)，comparator = 鞍点。
+- 图（一行三列）：\(\operatorname{Reg}_t^x(a),\operatorname{Reg}_t^y(b)\)；log-log restricted gap；\(Q_t\)。G2 主图 \(T=2\times10^4\)。G1 行 \(T=2\times10^5\)。
+- G1 + \(A=I\) 的 regret 恒为 0 是结构退化；非平凡 G1 regret 在 Gaussian 附录。
+- 可加 \(\sqrt t\) 虚线，**不要**把这条虚线写成 SOTA。Hsieh 的 self-play 曲线若画，只进 appendix 体检，不进 Figure 1 主文当 BoBW。
 - Smoke：\(\|x_1\|=\|y_1\|=0\)；\(t=2\) 已离开原点；`J>=1` 且后半段冻结。
-- **成功：** 后半段 regret 与 \(Q\) 近似水平；gap 随 \(T\) 下降。G1 last-iterate 打转可忽略。
-- **失败且可修：** \(T\) 不够、\(\texttt{ell1}\) 过大/过小、看了 \(\|z_t\|\) 而非平均 gap。
-- **失败且撤图：** 对鞍点的 regret 持续按 \(\sqrt T\) 涨，且查过实现仍如此 → 停，查证明/代码，不要投稿该图。
+- **成功 / 失败：** 同原判据。对鞍点 regret 按 \(\sqrt T\) 涨且实现无误 → 停，查证明。
 
-### Exp.2 Same-run 切换 + 分离例（主文 Figure 2）
+### Exp.2 Same-run 切换 + 分离例（主文 Figure 2；Step 12 / 13 必须改）
 
-- **2a 切换：** shifted G2 上 `switch`（前半 self-play，后半 §2 的连续 `slow`）。算法不检测、不换超参、不重启。竖线标 \(T/2\)。Claim 只讲 same-state / no reset / 数值稳定；**禁止**写 “unchanged in shape” 或“验证了 fallback rate”。
-- **2b 分离例：** G3 + `const`，**不改、不重跑**。画 \(\operatorname{Reg}_t^x(u^\star)\)，旁注 \(V_t(u^\star)=0\)。不要把该曲线解释成别人 \(\Omega(\sqrt T)\) 的下界。
-- **成功：** 一套状态跨过切换点，且切换处 \(\|y\|\) 无 \(O(1)\) 跳变；2b 的 \(V\equiv 0\) 且 regret 无明显 \(\sqrt T\) 斜向上。
-- **失败且可修：** 切换后短时振荡（可接受）；2b 的 \(V\) 因数值不是精确 0（应用解析梯度，应精确 0）。
-- **失败且撤图：** 切换后 regret 爆炸且实现无误 → 与 same-run 叙事冲突，该图不进主文。
+- **2a 切换：** 协议不变（连续 `slow`，smoke 不变）。**主曲线改为** \(\|x_t-a\|\)、\(\|y_t-b\|\) 与 \(V_t^x(a)\)。\(\mathrm{Reg}^x(a)\) 只许 inset / appendix。Claim 只讲 same-state / no reset；**禁止**写 unchanged in shape 或「验证了 fallback rate」。
+- **2b 分离例 + Hsieh：** G3 + \(y\equiv 1\)。D005 的 \(\mathrm{Reg}^x(u^\star)\) 保留；Step 13 **必须**叠加 Hsieh 同一 comparator。不要把 D005 单曲线解释成别人 \(\Omega(\sqrt T)\) 的下界；有了 Hsieh 真实曲线之后，按实际形状写（饱和 vs \(\sqrt{T}\)，或双方饱和则写入 limitations）。
+- **成功：** 切换处 \(\|y\|\) 无 \(O(1)\) 跳；\(V\) 在竖线后升起；\(\gamma\) 不重置；2b 的 \(V\equiv 0\)；Hsieh 实现通过 G2 self-play 平台体检。
+- **失败且撤图：** 切换后爆炸；或 Hsieh 在 G2 self-play 上按 \(\sqrt{T}\) 涨（baseline 作废，先修实现）。
 
-### Exp.3 Warm vs restart（主文 Figure 3 或表）
+### Exp.3 Warm vs restart（主文 Figure 3；Step 11 必须改 comparator）
 
-- 游戏：同一份 shifted G2，\(\texttt{ell1}=10^{-3}\)（必须真的加倍）。
-- 两条学习器其余相同，只改是否 reset。
-- **协议：** 主图用 X vs \(y\equiv e_1\)（不是 \(b\)）。诱导损失的最小点在 \(x^\star=a-A(e_1-b)/\mu\)；\(A=I\) 时 \(x^\star=-4.6 e_1+2 e_2\)，\(\|x^\star\|\approx 5.02\)。Cold restart 仍跳回**原点**（算法初值），不是鞍点。
-- 图（一行三列，前 400 步）：\(J_t\)（有限次后冻结）；\(\|x_t\|\)（restart 在 \(t=3\) 回原点）；\(\operatorname{Reg}^x(a)\)（一次性滞后）。
-- **成功：** \(J=1\) 后冻结；restart 的原点跳跃可见。不把终值相差写成 \(\sqrt{K}\) 税。正文写 cold-restart “faces the same game and opponent sequence”，禁止 “same realized play”。
-- **失败且可修：** 从未加倍 → 再减小 \(\ell_1\) 或加大 \(A,\mu\)。
-- **失败且撤图：** 连 vs-const 的前段也看不出 reset。正文本来就不证明 restart 必更差；删图，不改定理表述。
+- 游戏：shifted G2，\(\texttt{ell1}=10^{-3}\)。只改是否 reset。
+- **协议：** X vs \(y\equiv e_1\)。Comparator **必须**是 \(x^\star=a-A(e_1-b)/\mu\)（\(A=I\) 时 \(\approx -4.6 e_1+2 e_2\)，\(\|x^\star\|\approx 5.02\)），**禁止**再对鞍点 \(a\) 画主 regret。Cold restart 仍跳回原点。
+- 图：\(J_t\)；\(\|x_t\|\)（可加水平线 \(\|x^\star\|\)）；\(\operatorname{Reg}^x(x^\star)\) 应饱和，warm / restart 常数偏移。
+- **成功：** \(J=1\) 后冻结；原点跳跃可见；对 \(x^\star\) 后半段水平。不把终值差写成 \(\sqrt{K}\) 税。禁止 “same realized play”。
+- **失败且撤图：** 对 \(x^\star\) 仍线性变负；或看不出 reset。
 
-### 不做（除非附录还有空）
+### Exp.Hsieh（Step 13，必做）
 
-闭式 vs 隐式 runtime。主贡献不是速度。若做：\(d\in\{10,50,200\}\) 一张表，主文一句话。
+- `scripts/exp_hsieh.py` + `plot_hsieh.py`。
+- 必跑：G3 const；G2 switch（与 Exp.2a 同一对手序列）；G2 self-play 体检。
+- 主文：G3 对照进 Figure 2 右（或单独对照图）。一旦出现第二条算法曲线，删掉 “no other algorithm is shown”。
+
+### Exp.horizon（Step 15，必做）
+
+从已有 hist / G1 长跑抽取终端表，原则上不重跑：
+
+\[
+T\in\{5\times 10^3,\,10^4,\,2\times 10^4\}\ \text{(G2)},\qquad
+T\in\{2\times 10^4,\,10^5,\,2\times 10^5\}\ \text{(G1 \(Q\))}.
+\]
+
+列：\(\mathrm{Reg}^x(a)\)、\(Q_T\)、\(\mathrm{Gap}_T\)、\(T\cdot\mathrm{Gap}_T\)、\(J\)。进 appendix。不要跑 \(T<5\times 10^3\) 凑数。
+
+### Exp.LF（Step 16，必做）
+
+G2 self-play，\(A=cI\)，\(c\in\{0.25,0.5,1,2,4,8\}\)，**禁止**谱归一化。记录 \(J,\ell_T,\beta_T,\mathrm{Reg}_T(a),\mathrm{Gap}_T,Q_T\)。进 appendix。正文至多一句 finite doubling tracks realized smoothness。
+
+### Exp.VT（Step 17，两条都必做）
+
+- **17a 幅度扫频：** \(y_t=b+\eta\sin(2\pi t/T_{\mathrm{per}})e_1\)，\(\eta\) 数档。Comparator 用诱导最优固定点。终值 regret vs \(\sqrt{V_T(u)}\)。
+- **17b 更强分离：** 非平稳对手、观测 variation 大、但 \(V_T(u^\star)=O(1)\)。D005 应饱和。不宣称旧算法 \(\Omega(\sqrt{T})\)；Hsieh 可同图画（Step 13 之后）。
+
+### 明确不做
+
+- 闭式 vs 隐式 runtime / \(d\) 扫描。
+- 四层算法全扫。
+- 把 restart 终值差写成 \(\sqrt{K}\) 税。
+- 把 Exp.2 改成不连续大跳变（破坏 part D）。
+- 用任何自制算法代替 Hsieh 当 literature baseline。
 
 ---
 
 ## 6. 落地步骤
 
-按顺序，前一步通了再往下。每步在 `results/` 留一个 json 摘要（最终 \(\operatorname{Reg},Q,J,V\)）。
+按顺序执行。Step 0–10 已完成。**Step 11–18 全部必做**，没有「可选 / 视需要 / 最小闭环」。每步过 go/no-go 再往下。产物：compact `summary` json + 下采样 npz（禁止巨型全程 hist json）。
 
-**Step 0.（已完成）** `SPEC.md` + `configs/default.yaml` + 目录 + 依赖。
+**Step 0–10.（已完成）** D005 实现、shifted saddle、\(w_1=0\)、连续 switch、Gaussian 附录、cold restart 图、`experiments.tex` 弱声称插图。Step 3 冻结-\(\beta\) 体检用平移鞍点，不再用手工改第一步。**本阶段未加 Hsieh，这是缺口，由 Step 13 补上，不是最终状态。**
 
-**Step 1–2.（已完成）** `src/games.py`，`src/metrics.py`。检查：`python experiment/scripts/check_games_metrics.py`。
+**Step 11. Exp.3 comparator \(\to x^\star\)**（落实：vs-const 不再对鞍点累计）
 
-**Step 3 前半.（已完成）** 冻结 \(\beta\) 闭式核：`src/learner.py`。检查：`python experiment/scripts/check_frozen_beta.py`。G2、\(d=1\)、\(T=2000\)、\(\beta=5L_F\)。原点 self-play 是静止点，故体检用首步 \((1,-0.5)\)。摘要：`results/frozen_beta_g2.json`。
+- `QuadraticGame.induced_minimizer_x(y)`；`run_vs_const` 把 \(x^\star\) 传入 `RunningMetrics`。
+- Smoke：`V_x(x^\star)==0`；`J>=1`；restart \(t=3\) 回原点；warm 不回；\(\mathrm{Reg}^x(x^\star)\) 后半段水平。
+- 重跑 `check_restart.py`、`exp3_restart.py`、`plot_exp3.py`。右图例 \(\mathrm{Reg}^x(x^\star)\)。
+- 改 `experiments.tex` Figure 3 图注。仍不声称 \(\sqrt{K}\) 税。
+- **Go：** 两曲线饱和且差一个常数。**No-go：** 对 \(x^\star\) 仍 \(\Theta(T)\) 变负。
 
-**Step 3 后半.（已完成）** 打开 doubling。检查：`python experiment/scripts/check_doubling.py`。\(t=1\) 不加倍；\(\chi\) 只用自己的 \(g\)；\(\beta\) 非降；\(J\le\lceil\log_2(L^{\mathrm{row}}/\ell_1)\rceil\)；\(\gamma\) 与 \(G_{\mathrm{cum}}\) 不重置。摘要：`results/doubling_g2.json`。下一步 Exp.1，不要跳。
+**Step 12. Exp.2-left 换纵轴**（落实：负 regret 不作主曲线）
 
-**Step 4.（已完成，并入 Exp.1 / 对拍）** 闭式 vs 隐式半径：`python experiment/scripts/check_closedform.py`。全程 `assert_invariants()`（\(\beta\) 非降、\(\gamma\) 冻结、\(G_{\mathrm{cum}}\) 只累加、\(B\ge 4\)）。
+- 协议不变。主曲线 \(\|x_t-a\|\)、\(\|y_t-b\|\)、\(V_t^x(a)\)。
+- 重跑 `exp2_bobw.py --only 2a`、`plot_exp2.py`。改 Figure 2 左图注（part D）。
+- **Go：** 正弦增量；距离有界；\(V\) 在竖线后升起；\(\gamma\) 不变。
 
-**Step 5.（已完成）** Exp.1：`python experiment/scripts/exp1_selfplay.py` 写 json；`python experiment/scripts/plot_exp1.py --appendix` 出图。主图 `figures/exp1_selfplay.pdf`（\(A=I\) 单跑）。高斯 \(A\) 三 seed 进 `figures/exp1_G*_gaussian.pdf`，不画均值带。下一步 Exp.2，cold restart 仍推迟。
+**Step 13. 建立 Hsieh (2021) baseline**（落实：literature baseline）
 
-**Step 6.（已完成）** Exp.2：`run_loop` 支持外生 Y；`python experiment/scripts/exp2_bobw.py`；`python experiment/scripts/plot_exp2.py`。2b 先跑 G3+\(y\equiv 1\)（\(V=0\) 精确成立）；2a 为 G2 在 \(T/2\) 切到 `slow`。Cold restart 仍推迟。
+- `src/hsieh.py`、`scripts/exp_hsieh.py`、`scripts/plot_hsieh.py`、`scripts/check_hsieh.py`（G2 self-play 平台）。合同见 `SPEC.md`。
+- 必跑 G3 const、G2 switch、G2 self-play 体检。G3 对照进主文 Figure 2 右或单独图。
+- 删掉正文 “no other algorithm is shown”。禁止对着 D005 调参。禁止用 restart 冒充。
+- **Go：** Hsieh 在 G2 self-play 平台；G3 两条曲线可解释。**No-go：** self-play 上 Hsieh 走 \(\sqrt{T}\) → 先修实现。若 G3 上 Hsieh 也饱和，写入 limitations，仍算本步完成（实现可信且结果如实报告）。
 
-**Step 7.（已完成）** Exp.3：`python experiment/scripts/check_restart.py`；`python experiment/scripts/exp3_restart.py`；`python experiment/scripts/plot_exp3.py`。主图 `figures/exp3_restart.pdf`（G2 vs \(y\equiv e_1\)，前 400 步）。Self-play json 保留但不进主图。
+**Step 14. README + compact 摘要**（落实：复现性）
 
-**Step 8.（已完成）** 出图。三个 plot 脚本统一 Okabe-Ito 色盲调色板、pdf fonttype 42 矢量字体、线型可分（warm 实线 / restart 虚线）。Exp.3 第三面板改全地平线 + 前 400 轮 inset，标题去掉 \(\sqrt K\) 表述。全链路重跑：json 摘要逐位复现，8 张 pdf/png 定稿于 `figures/`。图注（现象 + 定理编号）在 LaTeX 侧待写，不写“优于 Hsieh”。
+- 新 run 一律 compact json + npz。
+- 写 `experiment/README.md`：环境、全部 `check_*.py`、`exp*.py`、`plot_*.py`、`exp_hsieh.py` 的命令顺序，以及一键顺序（11→18）。
+- 外层是否跟踪 `experiment/` 在 README 里写明现状。
 
-**Step 9.（已完成，将被 Step 10 作废图替换）** Go / no-go（见 §7）。裁决：Exp.1–2 进主文；Exp.3 进主文，只讲有限次加倍 + 一次断状态，不声称 restart 终值更差或 \(\sqrt{K}\) 税。
+**Step 15. Multi-horizon 表**（落实：rate 不只靠目测斜率）
 
-**Step 10.（待执行：投稿前对齐）** 作废旧 `results/exp1_*.json`、`exp2_G2_switch.json`、`exp3_*.json` 及对应主图。G3 json 保留。按顺序：
+- 按 §5 Exp.horizon 抽表，进 appendix（`appendix_experiments.tex`）。
+- G2 的 \(\mathrm{Reg},Q\) 应不随 \(T\) 涨；\(T\cdot\mathrm{Gap}_T\) 近似常值。
 
-1. `games.py`：G1/G2 平移；gap 以鞍点为心；`gaussian(..., normalize=True)`。
-2. 体检去掉 probe；保留 \(a=b=0\) 时“原点是静止点”的反面测试。
-3. 实验脚本：禁止覆盖 `action`；G1/G2 对 `game.saddle()` 做 comparator 断言；Exp.2-left 用连续 `slow`。
-4. 重跑 Exp.1 全套、Exp.2 `--only 2a`、Exp.3；出图；改 `experiments.tex` + 附录 Gaussian 图。
-5. 新图再走 §7。不混用新旧 json。
+**Step 16. \(L_F\) sweep**（落实：unknown-\(L_F\) 系统验证）
+
+- 按 §5 Exp.LF。`scripts/exp_lf_sweep.py`。禁止谱归一化。
+- **Go：** \(J\) 有限非降；\(c\) 增大时终值 \(\ell,\beta\) 不减；self-play 仍平台。
+
+**Step 17. \(V_T\) 适应（两条都做）**（落实：不只 \(V=0\) 端点）
+
+- **17a** 幅度扫频 + regret vs \(\sqrt{V_T(u)}\)。`scripts/exp_vt_sweep.py`。
+- **17b** 非平稳、观测 variation 大、\(V_T(u^\star)=O(1)\)。可与 Hsieh 同图。
+- **Go：** 17a 随 \(\sqrt{V}\) 平滑变差；17b 上 D005 饱和。
+
+**Step 18. 正文与附录收口**（落实：新建议全部写进论文实验节）
+
+改 `note/sections/experiments.tex` 与 `appendix_experiments.tex`：
+
+- Figure 1 保留 self-play（可加 horizon 表引用）。
+- Figure 2：左 = Step 12 纵轴；右 = D005 vs Hsieh on G3。
+- Figure 3：\(\mathrm{Reg}^x(x^\star)\)。
+- 附录：Gaussian（已有）、horizon 表、\(L_F\) sweep、\(V_T\) 17a/17b、Hsieh self-play 体检。
+- 删除 “no other algorithm is shown” 以及任何「本轮不加 baseline」。
+- 有 Hsieh 真实曲线且方向正确后，才允许写经验 fallback advantage；否则只写 theorem 分离 + 如实报告。
+
+**完成判据（必须同时满足，对应 `reflection.txt` 第 5 节）**
+
+| 新建议条目 | 由哪一步落实 |
+|---|---|
+| Exp.3 用诱导最优 \(x^\star\) | 11 + 18 |
+| Exp.2-left 换纵轴，去掉大负 regret 主曲线 | 12 + 18 |
+| Hsieh (2021) literature baseline（G3 主对照，switch 次之） | 13 + 18 |
+| README / compact summary / 可复现入口 | 14 |
+| multi-horizon 终端表 | 15 + 18 |
+| \(L_F\) sweep（非谱归一化） | 16 + 18 |
+| \(V_T\) 中间制度 | 17a + 18 |
+| 非平稳且 \(V(u^\star)=O(1)\) 的更强分离 | 17b + 18 |
+
+未勾满上表，不得声称「实验闭环完成」。
 
 ---
 
 ## 7. Go / no-go
 
-对每张图只判三类：
-
-1. **进主文：** 现象与定理同形。
-2. **进 appendix / 不提：** 能跑但不加分（例如 G1 的 last-iterate 很吵）。
-3. **整节删除：** 对准定理的量明显反了，或对照（restart）没有故事。
+对每张图只判三类：进主文 / 进 appendix / 整节删除。额外：
 
 | 现象 | 动作 |
 |---|---|
 | 平台期晚、常数大 | 加大 \(T\)；仍水平就进文，不拟合 \(\bar Q\) |
-| last-iterate 差、平均 gap 好 | 只画平均；与“不声称 last-iterate”一致 |
-| restart 不更差（vs-const 前段也无跳跃） | 删 Exp.3 |
-| self-play regret 真按 \(\sqrt T\) 涨 | 先查 §3.4 顺序与 \(g^y\) 符号；仍反则停实验、查证明 |
-| 切换后崩溃 | 不进主文；论文改回纯理论 |
+| last-iterate 差、平均 gap 好 | 只画平均 |
+| restart 对 \(x^\star\) 看不出跳跃 | 删 Exp.3 主图，不改定理 |
+| self-play regret 真按 \(\sqrt T\) 涨 | 先查更新顺序与 \(g^y\)；仍反则停 |
+| 切换后崩溃 | 该图不进主文 |
+| Hsieh 在 G2 self-play 不平台 | **对照作废**，先修 `hsieh.py`，禁止投稿对照图 |
+| G3 上 Hsieh 也饱和 | 如实写 limitations，不改口 realized-regret 分离 |
+| \(L_F\) sweep 大 \(c\) 上 D005 走 \(\sqrt T\) | 该表不进文，先查 \(\chi\) / 证明 |
 
-**原则：** 失败的图比没有图更伤。COLT 直接跳过本文件夹。
+原则：失败的对照图比没有对照更伤。COLT 跳过本文件夹。
 
 ---
 
-## 8. 主文怎么引用
+## 8. 主文怎么引用（Step 18 完成后的目标态）
 
 放在 Main Theorem 与 limitations 之间。
 
-- Figure 1 = Exp.1（G2 为主，G1 作补充可进 appendix）。
-- Figure 2 = Exp.2a + 2b。
-- Figure 3 = Exp.3（G2 vs \(y\equiv e_1\)，前 400 步；self-play 无可见跳跃，不进主图）。
+- Figure 1 = Exp.1 self-play（D005）。
+- Figure 2 左 = Exp.2a 距离 / \(V_t\)（part D）；右 = G3 上 D005 vs Hsieh（part C + 算法对照）。
+- Figure 3 = Exp.3 warm vs restart，\(\mathrm{Reg}^x(x^\star)\)。
+- 附录 = Gaussian Exp.1、horizon 表、\(L_F\) sweep、\(V_T\) 17a/17b、Hsieh self-play 体检。
 
-正文三句话就够：self-play 饱和；同一轨迹切换后不重开（不检测、不重置，不声称 shape 不变）；warm 有限次加倍、restart 会断状态。不把实验写成贡献条目。附录给 spectral-normalized Gaussian 的 Exp.1。
+正文必须覆盖：self-play 饱和；same-run 不重置；有限加倍与一次断状态；**G3 上与 Hsieh 的真实 regret 对照**；unknown-\(L_F\) 与 \(V_T\) 适应指向附录。不把 cold restart 写成 literature baseline。删除 “no other algorithm is shown”。
 
 ---
 
@@ -346,5 +431,6 @@ w_t=
 | \(q_t,w_t,\zeta\) | `eq:q-t-var`, `eq:w-cf`, `eq:zeta` |
 | \(\chi_t\)、加倍、系数 64 | `eq:chi`, `eq:ell-update`, `eq:t006-1` |
 | regret / \(V_T\) / restricted gap | `eq:regret`, `eq:VT`, `eq:restricted-gap` |
-| 分离例 | `appendix_a.tex` / `note/example.md` |
+| 分离例 | `appendix_a.tex` |
 | cold restart | `remark:cold` |
+| Hsieh baseline | `hsieh2021adaptive`；实现合同 `SPEC.md` |

@@ -1,9 +1,9 @@
 # D005 编码规格（Step 0）
 
-本文件把正文算法钉成编程合同。下一步只实现游戏与度量，不在这里改故事、不加游戏、不写学习器。
+本文件把正文算法钉成编程合同。D005 更新顺序不可改。Comparator 与 Hsieh baseline 以本文「协议第 7 条」和「Hsieh (2021)」节为准，**废除**「G1/G2 一律鞍点 / 不加 Hsieh」。
 
 对照：`note/sections/setting.tex`，`adaptive.tex`，`main-result.tex`，`appendix_a.tex`。  
-`log` = 自然对数。全程 `float64`。
+`log` = 自然对数。全程 `float64`。落地步骤：`PLAN.md` §6。
 
 ---
 
@@ -14,8 +14,12 @@
 3. 回合结束后 \(z_t\) 公开，仅用于 \(\chi_t^i\)。\(\chi\) 的分子只用**自己的** \(g_t^i,g_{t-1}^i\)。
 4. 算法输入只有 \(\epsilon,\beta_0,\ell_1\)。不读 \(L_F,T,G,V,u\)。
 5. Warm：从不重置累加器、clipping、\(\zeta\)、动作。加倍只升 \(\beta\)，且新 \(\beta\) 只用于**下一轮**。
-6. 第 1 轮动作必须是学习器给出的 \(w_1=0\)。投稿实验脚本**禁止**在 `ClosedFormPlayer` 构造之后改 `action`。
-7. G1/G2 的 regret / linearized regret / \(V\) 的 comparator 必须是 `game.saddle()`，不得 hard-code 原点。G3 的 X 仍用 \(u^\star\)。
+6. 第 1 轮动作必须是学习器给出的 \(w_1=0\)。投稿实验脚本**禁止**在学习器构造之后改 `action`（D005 与 Hsieh 均适用）。
+7. Comparator 按协议选，禁止 hard-code 原点、禁止图例 \(\mathrm{Reg}^x(0)\)：
+   - G1/G2 **self-play**：`game.saddle()`，跑完 `assert allclose(u_x,a)` 且 `allclose(u_y,b)`。
+   - G2 **vs-const**（\(y\equiv e_1\)，含 Exp.3 与该协议上的 Hsieh）：\(u_x=x^\star=a-A(e_1-b)/\mu\)，并 `assert V_x(x^\star)==0`。
+   - G3：X 用 \(u^\star=-1/\sqrt{3}\)。
+   - Exp.2-left **主曲线不用** \(\mathrm{Reg}^x(a)\)（见不变量）。
 
 反馈符号（`eq:feedback`）：
 
@@ -132,9 +136,20 @@ w_t=
 
 ---
 
-## Cold restart（对照，Exp.3）
+## Cold restart（机制 ablation，Exp.3）
 
-与 D005 同一套 \(\chi,\ell,\beta\)。仅当 \(\chi_t>\ell_t\) 时，在更新 \(\ell,\beta\) 之后清零：\(w,h,G_{\mathrm{cum}},\zeta,z_{\mathrm{prev}},g_{\mathrm{prev}}\)；用新 \(\beta_+\) 设 \(\gamma_+\leftarrow\epsilon\beta_+\)，clipping 按初值公式重开。下一轮跳过 \(\chi\)（与 \(t=1\) 相同）。主实验默认不用。
+不是 literature baseline。与 D005 同一套 \(\chi,\ell,\beta\)。仅当 \(\chi_t>\ell_t\) 时，在更新 \(\ell,\beta\) 之后清零：\(w,h,G_{\mathrm{cum}},\zeta,z_{\mathrm{prev}},g_{\mathrm{prev}}\)；用新 \(\beta_+\) 设 \(\gamma_+\leftarrow\epsilon\beta_+\)，clipping 按初值公式重开。下一轮跳过 \(\chi\)（与 \(t=1\) 相同）。主算法默认不用。
+
+---
+
+## Hsieh (2021) literature baseline（必做）
+
+单独 `src/hsieh.py`，**禁止**改 `ClosedFormPlayer` 来“兼作”Hsieh。接到与 D005 相同的环境协议：同时行动、只看自己的偏梯度、\(w_1=0\)、不读 \(T,G,V,u\)。不要求公开 \(z_t\)。
+
+- 更新式、步长 / 自适应量、hint 必须能指回 Hsieh et al., COLT 2021 原文编号。超参用该文 adaptive 规则，**禁止**对着 D005 曲线调参。
+- 若全文更新无法忠实复现：允许实现标准 last-gradient optimistic 更新（附录 A 的 \(\Theta(\sqrt{T})\) 上界那一类），图例必须写真名，**禁止**把 proxy 标成 Hsieh。
+- 实现体检（对照作废条件）：G2 self-play 上该学习器的 regret 与 \(Q\) 必须进入 \(O(1)\) 平台。该体检图进 appendix，主文不把两个 self-play 平台并排当作 BoBW 证据。
+- 主对照：G3 + \(y\equiv 1\)，同一 \(T\)、同一 \(u^\star\)，D005 vs Hsieh 的 \(\mathrm{Reg}^x(u^\star)\)；以及 Step 12 之后的 G2 switch 同一条对手序列（纵轴与 Exp.2-left 一致）。
 
 ---
 
@@ -149,7 +164,7 @@ w_t=
 - \(G_t^i=\max_{s\le t}\|g_s^i\|\)
 - Restricted gap：测试球半径 \(R=1\)、**以鞍点为心**。G1 闭式 \(R(\|A^\top(\bar x-a)\|+\|A(\bar y-b)\|)\)。G2 在 \(x'=\bar x-a,\,y'=\bar y-b\) 上用解析式，禁止网格搜索。
 
-默认 comparator：G1/G2 为 `game.saddle()`，投稿实例 \((a,b)=(0.4 e_1,0.4 e_2)\)；构造函数默认 \(a=b=0\) 仅供原点静止点体检。G3 的 X 用 \(u^\star=-1/\sqrt{3}\)。G1/G2 实验在 `run_loop` 之后必须 `assert allclose(metrics.u_x, a)` 且 `allclose(metrics.u_y, b)`。图例禁止 \(\mathrm{Reg}^x(0)\)。
+Comparator 按上面协议第 7 条，不得一律写成 `game.saddle()`。投稿实例 \((a,b)=(0.4 e_1,0.4 e_2)\)；构造函数默认 \(a=b=0\) 仅供原点静止点体检。`QuadraticGame` 必须提供 `induced_minimizer_x(y)`，G2 vs-const 用它，不用鞍点。图例禁止 \(\mathrm{Reg}^x(0)\)。
 
 ---
 
@@ -162,9 +177,11 @@ w_t=
 - Warm：\(\gamma\) 永不改，\(G_{\mathrm{cum}}\) 只累加、不清零。Restart：\(\gamma=\epsilon\beta\)，加倍当轮清空 \(G_{\mathrm{cum}}\)。
 - \(B\ge 4\)，\(\overline V\ge 4\widehat M^2\)，\(\alpha>0\)，\(a\ge 2\widehat M\)。
 - \(q_t(s)\) 对大 \(s\) 有限（`logaddexp`）。
-- G3 + \(y\equiv 1\)：\(V_t(u^\star)=0\)，\(1\le G_t^x\le 3\)（度量步再断言）。
-- 投稿 G1/G2：\(t=1\) 的动作范数为 0；不得覆盖 `action`。
-- Exp.2-left：\(t>T/2\) 时 \(y_t=y_{T/2}+\sin(2\pi(t-T/2)/200)\,e_1\)；\(\|y_{T/2}-b\|\le 0.05\)；第一步差等于 \(\lvert\sin(2\pi/200)\rvert\)。
+- G3 + \(y\equiv 1\)：\(V_t(u^\star)=0\)，\(1\le G_t^x\le 3\)（D005 与 Hsieh 共用该度量断言）。
+- 投稿实例：\(t=1\) 的动作范数为 0；不得覆盖 `action`。
+- Exp.2-left：\(t>T/2\) 时 \(y_t=y_{T/2}+\sin(2\pi(t-T/2)/200)\,e_1\)；\(\|y_{T/2}-b\|\le 0.05\)；第一步差等于 \(\lvert\sin(2\pi/200)\rvert\)。主曲线为 \(\|x_t-a\|\)、\(\|y_t-b\|\)、\(V_t^x(a)\)，不以 \(\mathrm{Reg}^x(a)\) 作主纵轴。
+- Exp.3 vs-const：\(\mathrm{Reg}^x(x^\star)\) 后半段近似水平；`V_x(x^\star)==0`。
+- 新 run 只写 compact `summary` json + 下采样 npz，禁止再把全程 \(T=2\times 10^4\) hist 打进单文件。
 
 ---
 
@@ -177,4 +194,5 @@ w_t=
 - Step 4–5（已完成）：`hist` 含 `lin/ell/beta/J`；`assert_invariants`；闭式对拍 `scripts/check_closedform.py`；Exp.1 `scripts/exp1_selfplay.py` + `scripts/plot_exp1.py`。
 - Step 6（已完成）：`run_loop`；Exp.2 `scripts/exp2_bobw.py` + `scripts/plot_exp2.py`。
 - Step 7（已完成）：cold restart；Exp.3 `scripts/exp3_restart.py` + `scripts/plot_exp3.py`；体检 `scripts/check_restart.py`。
-- Step 10（待执行）：shifted G1/G2、严格 \(w_1=0\)、连续 slow switch、comparator=`saddle()`；作废旧 Exp.1 / 2a / 3 json。G3 不重跑。不加 Hsieh。
+- Step 10（已完成）：shifted G1/G2、严格 \(w_1=0\)、连续 slow switch、self-play comparator=`saddle()`、Gaussian 附录。
+- Step 11–18（待执行，合同以 `PLAN.md` §6 为准，**全部必做**）：Exp.3 用 \(x^\star\)；Exp.2-left 换纵轴；Hsieh baseline；README + compact 摘要；multi-horizon 表；\(L_F\) sweep；\(V_T\) 幅度扫频 **与** 非平稳 \(V(u^\star)=O(1)\) 分离；改 `experiments.tex`。做完后 `reflection.txt` 第 5 节全部条目必须已落实，不得再留「可选 / 视需要 / 不加 Hsieh」。
