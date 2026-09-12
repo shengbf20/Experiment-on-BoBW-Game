@@ -1,0 +1,51 @@
+可以，压缩成下面几条：
+
+1. **总体结论**
+
+   * 代码实现与 note 中算法基本一致，核心指标定义也基本正确。
+   * 当前实验可以作为**理论论文里的 Numerical Illustrations**。
+   * 但还不足以称为“全面验证算法有效性”的强实验部分。
+
+2. **目前做得比较好的地方**
+
+   * 更新顺序、doubling、warm rescaling、clipping、\(\gamma\) 固定等关键实现基本正确。
+   * regret、\(Q_T\)、\(V_T(u)\)、restricted gap 的计算方式合理。
+   * 有针对初始化、doubling、restart、closed-form 数值稳定性的 sanity checks。
+   * G2 self-play 和 G3 的 \(V_T(u)=0\) 例子比较干净，能说明理论预测的现象。
+
+3. **最主要的问题**
+
+   * **缺少强 baseline**：目前主要比较 warm vs restart，没有充分和已有算法、known-\(L_F\) oracle 比。
+   * **理论 rate 主要靠看曲线**：\(O(1)\)、\(O(1/T)\) 最好增加不同 horizon 下的定量表，而不只是参考斜率。
+   * **fallback 实验不够强**：switch 后 regret 大量变成负值，实际上没有真正“压力测试” arbitrary-opponent bound。
+   * **unknown-\(L_F\) 验证不足**：目前基本只在 \(L_F\) 一个尺度附近实验，应该改变 \(\|A\|\) 测 doubling 次数和最终参数。
+   * **\(V_T(u)\) 只验证了特殊端点**：G3 是 \(V=0\)，最好再做多个不同 \(V_T\) 水平。
+   * **可复现性还可以加强**：建议公开 raw results、README、统一配置和一键运行脚本。
+
+4. **我最建议补的三个实验**
+
+   * **\(L_F\) sweep**：改变 \(\|A\|\)，验证 unknown-\(L_F\) doubling 是否符合理论。
+   * **\(V_T(u)\) sweep**：控制 opponent 的幅度/频率，观察 regret 随 comparator-local variation 的变化。
+   * **baseline**：至少加入 known-\(L_F\) oracle；如果投 ICML/ICLR/NeurIPS，再加入最相关已有算法。
+
+5. **Exp.3 建议修改**
+
+   * 现在 regret 用的是 comparator \(a\)，导致 regret 变成很大的负数，warm/restart 差别不直观。
+   * 建议改成对固定 opponent 下的最优 comparator \(x^\star\) 计算 regret，会更清楚展示 restart 带来的额外代价。
+
+6. **论文中可以怎么表述**
+
+   * 当前可以写：
+     **“Numerical experiments illustrate the theoretically predicted behavior.”**
+   * 暂时不建议写：
+     **“Experiments comprehensively validate the effectiveness/superiority of the algorithm.”**
+
+7. **最终评级**
+
+   * 实现正确性：**较高**
+   * 实验严谨性：**中上**
+   * 实验全面性：**不足**
+   * 理论论文中的 numerical section：**基本可用，补几项后较稳**
+   * 强 empirical paper 水平：**目前还不够**
+
+最关键的一句话就是：**目前不是“实验有错误”，而是“实验覆盖面还不足以完全支撑算法的全部理论卖点”。**
