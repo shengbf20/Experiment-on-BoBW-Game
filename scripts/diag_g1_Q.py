@@ -1,4 +1,10 @@
-"""Diagnose G1 Q_t growth from compact json/npz. Optional long run."""
+"""Diagnose G1 Q_t growth from compact json/npz. Optional long run.
+
+Respects stride / t stored in the npz. Do not use this script to audit
+tab:exp-horizon: it is a diagnostic printout, not the horizon extractor.
+The table is produced by scripts/exp_horizon.py from json summaries and
+explicit t_used samples.
+"""
 
 from __future__ import annotations
 
@@ -22,13 +28,32 @@ def _last(hist: dict, key: str):
     return val
 
 
+def _horizon_axis(payload: dict, hist: dict, n: int) -> tuple[np.ndarray, int]:
+    meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
+    T = payload.get("T") or meta.get("T")
+    if T is None and "T" in hist:
+        T = int(np.asarray(hist["T"]).reshape(-1)[0])
+    T = int(T) if T is not None else n
+    if "t" in hist:
+        t = np.asarray(hist["t"], dtype=np.int64).reshape(-1)
+        if t.size == n:
+            return t, T
+    if "stride" in hist:
+        stride = int(np.asarray(hist["stride"]).reshape(-1)[0])
+        t = np.arange(1, T + 1, dtype=np.int64)[::stride][:n]
+        return t, T
+    return np.arange(1, n + 1, dtype=np.int64), T
+
+
 def diagnose(tag: str) -> None:
-    _payload, h = load_run(tag)
+    payload, h = load_run(tag)
     Q = np.asarray(h["Q"], dtype=float)
-    T = len(Q)
-    t = np.arange(1, T + 1)
+    t, T = _horizon_axis(payload, h, len(Q))
     dQ = np.diff(Q, prepend=0.0)
     print(f"=== {tag} ===")
+    if len(Q) != T:
+        print(f"  stored n={len(Q)}  horizon T={T}  (do not treat n as T)")
+        print("  horizon table: python scripts/exp_horizon.py")
     print(
         "reg_x_T", _last(h, "reg_x"),
         "reg_y_T", _last(h, "reg_y"),
@@ -38,17 +63,31 @@ def diagnose(tag: str) -> None:
         "beta", _last(h, "beta_x"), _last(h, "beta_y"),
     )
     for k in [100, 1000, 5000, 10000, 15000, 20000, 50000, 100000, 200000, 500000, 1000000]:
-        if k <= T:
-            rx = h["reg_x"][k - 1] if "reg_x" in h else float("nan")
-            gp = h["gap"][k - 1] if "gap" in h else float("nan")
-            print(f"  t={k:7d}  Q={Q[k-1]:.6f}  dQ={dQ[k-1]:.3e}  regx={rx:.6f}  gap={gp:.4e}")
-    windows = [(T // 4, T // 2), (T // 2, 3 * T // 4), (3 * T // 4, T)]
+        if k > T:
+            continue
+        idx = int(np.where(t <= k)[0][-1]) if np.any(t <= k) else None
+        if idx is None:
+            continue
+        t_used = int(t[idx])
+        rx = h["reg_x"][idx] if "reg_x" in h else float("nan")
+        gp = h["gap"][idx] if "gap" in h else float("nan")
+        mark = "" if t_used == k else f"  (sample t={t_used})"
+        print(
+            f"  t<={k:7d}  Q={Q[idx]:.6f}  dQ={dQ[idx]:.3e}  "
+            f"regx={rx:.6f}  gap={gp:.4e}{mark}"
+        )
+    n = len(Q)
+    windows = [(n // 4, n // 2), (n // 2, 3 * n // 4), (3 * n // 4, n)]
     for lo, hi in windows:
-        print(f"  Q[{lo}:{hi}] increment {Q[hi-1]-Q[lo-1]:.6f}, mean dQ {dQ[lo:hi].mean():.3e}")
-    sl = slice(T // 2, T)
-    A_lin = np.vstack([np.ones(T - T // 2), t[sl]]).T
+        print(
+            f"  Q index [{lo}:{hi}] increment {Q[hi - 1] - Q[lo - 1]:.6f}, "
+            f"mean dQ {dQ[lo:hi].mean():.3e}  "
+            f"(t={int(t[lo])}:{int(t[hi - 1])})"
+        )
+    sl = slice(n // 2, n)
+    A_lin = np.vstack([np.ones(n - n // 2), t[sl].astype(float)]).T
     c_lin, _, _, _ = np.linalg.lstsq(A_lin, Q[sl], rcond=None)
-    A_log = np.vstack([np.ones(T - T // 2), np.log(t[sl].astype(float))]).T
+    A_log = np.vstack([np.ones(n - n // 2), np.log(t[sl].astype(float))]).T
     c_log, _, _, _ = np.linalg.lstsq(A_log, Q[sl], rcond=None)
     rmse_lin = float(np.sqrt(np.mean((Q[sl] - A_lin @ c_lin) ** 2)))
     rmse_log = float(np.sqrt(np.mean((Q[sl] - A_log @ c_log) ** 2)))

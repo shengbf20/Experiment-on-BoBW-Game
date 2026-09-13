@@ -88,8 +88,11 @@ def _smoke(hist: dict, max_w: float, T: int, tag: str) -> None:
 def _check_platform(hist: dict, T: int, tag: str, c: float) -> dict:
     """Q controlled; last-iterate approaches the saddle. Strict freeze only for small c.
 
-    Large c freezes J and Q immediately but crawls under a large beta; that is a
-    late platform (PLAN §7: increase T), not a sqrt(T) failure.
+    Large c freezes J and Q immediately but crawls under a large beta. At
+    T=2e4 that crawl is still rising (c=8 looks like sqrt(T) on the short
+    window). Increasing T may freeze (c=4) or keep a decreasing crawl that
+    undershoots a sqrt(T) extrapolation (c=8). Do not call the latter a
+    platform.
     """
     reg = np.asarray(hist["reg_x"], dtype=float)
     Q = np.asarray(hist["Q"], dtype=float)
@@ -143,6 +146,13 @@ def _check_sweep(rows: list[dict]) -> None:
             raise AssertionError(f"beta_T decreased with c: {betas}")
     if any(abs(r["A_op"] - r["c"]) > 1e-10 for r in rows):
         raise AssertionError("spectral normalization leaked: ||A||_2 != c")
+    for r in rows:
+        want = float(np.sqrt(2.0) * r["L_op"])
+        if abs(r["ell"] - want) > 1e-9:
+            raise AssertionError(
+                f"ell_T must equal sqrt(2) L_F after one doubling, not a fit: "
+                f"c={r['c']:g} ell={r['ell']} vs {want}"
+            )
 
 
 def run_one(c: float, cfg: dict, T: int, radius: float, dim: int, default_T: int) -> dict:

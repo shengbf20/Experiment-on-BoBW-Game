@@ -292,18 +292,18 @@ T\in\{2\times 10^4,\,10^5,\,2\times 10^5\}\ \text{(G1 \(Q\))}.
 \]
 
 列：\(\mathrm{Reg}^x(a)\)、\(Q_T\)、\(\mathrm{Gap}_T\)、\(T\cdot\mathrm{Gap}_T\)、\(J\)。进 appendix。不要跑 \(T<5\times 10^3\) 凑数。
-**成功：** G2 的 \(\mathrm{Reg},Q\) 不随 \(T\) 涨；\(\mathrm{Gap}\) 下降且 \(T\cdot\mathrm{Gap}_T=O(1)\)（本实例上随 \(T\) 加倍而减半，不另声称指数）。G1 的 \(Q\) 在长 horizon 冻结。
+**成功：** G2 的 \(\mathrm{Reg},Q\) 不随 \(T\) 涨；\(\mathrm{Gap}\) 下降。本实例 last-iterate 已贴鞍点，\(t\cdot\mathrm{Gap}\) 随 \(t\) 加倍而减半是局部 \(1/T^2\)，与 \(O(1/T)\) 上界数量级相容，不另声称指数，也不是 Figure 1 中 \(1/t\) 虚线的斜率。G1 的 \(Q\) 在长 horizon 上相对 \(T=2\times10^4\) 已进入平台（四位小数上允许残差，不是 bitwise 冻结）；冻结后 \(t\cdot\mathrm{Gap}=O(1)\)。G1 中行若长跑 stride \(10\) 则标实际样本时刻（现为 \(t=99991\)），不要写成精确的 \(10^5\cdot\mathrm{Gap}_{10^5}\)。核表走 `exp_horizon.py`，不要用 `diag_g1_Q.py`。
 
 ### Exp.LF（Step 16，必做）
 
 G2 self-play，\(A=cI\)，\(c\in\{0.25,0.5,1,2,4,8\}\)，**禁止**谱归一化。记录 \(J,\ell_T,\beta_T,\mathrm{Reg}_T(a),\mathrm{Gap}_T,Q_T\)。进 appendix。正文至多一句 finite doubling tracks realized smoothness。
-**成功：** \(J=1\) 对所有 \(c\)（有限非降，加倍均在 \(t=2\)）；\(\ell_T,\beta_T\) 随 \(c\) 严格递增。\(c\le 2\) 在 \(T=2\times10^4\) 已平台（\(c=1\) 与 Exp.1 一致）。大 \(c\) 上 \(Q,J\) 立即冻结，last-iterate 晚到（\(c=4\) 于 \(T=10^5\) 冻在 \(80.76\)；\(c=8\) 仍在靠近），不是 \(\sqrt{T}\)。
+**成功：** \(J=1\) 对所有 \(c\)（有限非降，加倍均在 \(t=2\)）；\(\ell_T=\sqrt{2}\,L_F\) 是对称初始化下一次加倍的恒等，不是拟合。\(c\le 2\) 在 \(T=2\times10^4\) 已平台（\(c=1\) 与 Exp.1 一致）。大 \(c\) 上 \(Q,J\) 立即冻结，last-iterate 晚到（\(c=4\) 于 \(T=10^5\) 冻在 \(80.76\)；\(c=8\) 仍在靠近，\(\|x_T-a\|=0.033\)，不是 \(\sqrt{T}\)，也还不是 platform）。短窗图 \(T=2\times10^4\) 不单独支撑 “不是 \(\sqrt{T}\)”；长跑 \(c=4,8\) 走 `exp_lf_sweep.py --T 100000 --c 4 8`。
 
 ### Exp.VT（Step 17，两条都必做）
 
 - **17a 幅度扫频：** \(y_t=b+\eta\sin(2\pi t/T_{\mathrm{per}})e_1\)，\(\eta\) 数档。Comparator 用诱导最优固定点。终值 regret vs \(\sqrt{V_T(u)}\)。
-- **17b 更强分离：** 非平稳对手、观测 variation 大、但 \(V_T(u^\star)=O(1)\)。D005 应饱和。不宣称旧算法 \(\Omega(\sqrt{T})\)；Hsieh 可同图画（Step 13 之后）。
-**成功：** 17a 在 \(T_{\mathrm{per}}=100\)、\(\eta\le 0.4\) 上 \(\mathrm{LinReg}\) 随 \(\sqrt{V}\) 上升（更大 \(\eta\) 开始跟踪，静态 regret 回落，已写入附录）。17b 用 G3、\(T_{\mathrm{per}}=\sqrt{T}\)、\(\eta=1/2\)：\(V_T\approx 4.93=O(1)\)，路径长 \(\approx 283\)，D005 平台约 \(58.5\)。Hsieh 同路径静态 regret \(-986\)（跟踪，不是 \(\Omega(\sqrt{T})\)，不作排名）。
+- **17b 更强分离：** 非平稳对手、观测 variation 大、但终端 \(V_T=O(1)\)（本实例对一切 \(u\)）。D005 应保持 \(O(1)\)。不宣称旧算法 \(\Omega(\sqrt{T})\)；Hsieh 可同图画（Step 13 之后）。
+**成功：** 17a 在 \(T_{\mathrm{per}}=100\)、\(\eta\le 0.4\) 上 \(\mathrm{LinReg}\) 随 \(\sqrt{V}\) 上升（更大 \(\eta\) 开始跟踪，静态 regret 回落；左图 \(\eta=0.5\) 已在下降，未跑更大 \(\eta\)/\(T_{\mathrm{per}}\) 变负）。17b 用 G3、\(T_{\mathrm{per}}=\sqrt{T}\)、\(\eta=1/2\)：终端 \(V_T\approx 4.93=O(1)\)（单条 \(V_t\) 仍随 \(t\) 涨），路径长 \(\approx 283\)，D005 终端约 \(58.5\)（峰值 \(61.6\) 后缓降，不是冻结）。Hsieh 同路径静态 regret \(-986\)（跟踪，不是 \(\Omega(\sqrt{T})\)，不作排名）。两例 \(V\) 都不依赖 \(u\)。
 
 ### 明确不做
 
@@ -351,18 +351,18 @@ G2 self-play，\(A=cI\)，\(c\in\{0.25,0.5,1,2,4,8\}\)，**禁止**谱归一化�
 **Step 15.（已完成） Multi-horizon 表**（落实：rate 不只靠目测斜率）
 
 - 按 §5 Exp.horizon 从已有 G2 / G1 长跑抽取，`scripts/exp_horizon.py`，进 `appendix_experiments.tex`。
-- **Go：** G2 的 \(\mathrm{Reg},Q\) 不随 \(T\) 涨（\(5.308\), \(0.0289\) 从 \(T=5\times10^3\) 起冻结）。\(T\cdot\mathrm{Gap}_T\) 在 G2 上随 \(T\) 加倍而减半（与 \(O(1/T)\) 相容，不声称更紧的指数）。G1 的 \(Q\) 在 \(10^5\) 后冻结，之后 \(T\cdot\mathrm{Gap}_T\approx 10^2\)。
+- **Go：** G2 的 \(\mathrm{Reg},Q\) 不随 \(T\) 涨（\(5.308\), \(0.0289\) 从 \(T=5\times10^3\) 起冻结）。G2 上 \(t\cdot\mathrm{Gap}_t\) 随 \(t\) 加倍而减半是本实例的 \(1/T^2\)（Cesàro），与 \(O(1/T)\) 上界数量级相容，不声称更紧的指数，也不是 Figure 1 中 \(1/t\) 虚线的斜率。G1 的 \(Q\) 相对 \(T=2\times10^4\) 已进入平台（\(0.3425\to 0.3433\) 仍有 \(0.24\%\) 残差）；之后 \(t\cdot\mathrm{Gap}_t\approx 10^2\)。中行标 \(t=99991\)。
 
 **Step 16.（已完成） \(L_F\) sweep**（落实：unknown-\(L_F\) 系统验证）
 
 - 按 §5 Exp.LF。`scripts/exp_lf_sweep.py`、`plot_lf_sweep.py`，禁止谱归一化。附录 `app:exp-lf`。
-- **Go：** \(J=1\) 有限非降；\(\ell_T=0.453,0.762,1.44,2.84,5.66,11.32\) 随 \(c\) 不减；\(c=1\) 与 Exp.1 一致。大 \(c\) 是晚到的平台（加大 \(T\)），不是 \(\sqrt{T}\)。
+- **Go：** \(J=1\) 有限非降；\(\ell_T=0.453,0.762,1.44,2.84,5.66,11.32=\sqrt{2}\,L_F\)（恒等，不是拟合）；\(c=1\) 与 Exp.1 一致。\(c=4\) 于 \(T=10^5\) 冻在 \(80.76\)；\(c=8\) 仍在靠近（\(\mathrm{Reg}=319.6\)，\(\|x_T-a\|=0.033\)），低于 \(\sqrt{T}\) 外推，不是 platform。
 
 **Step 17.（已完成） \(V_T\) 适应（两条都做）**（落实：不只 \(V=0\) 端点）
 
 - **17a** 幅度扫频 + regret vs \(\sqrt{V_T(u)}\)。`scripts/exp_vt_sweep.py`、`plot_vt_sweep.py`。附录 `app:exp-vt`。
-- **17b** G3 \(y_t=1+\tfrac12\sin(2\pi t/\sqrt{T})\)，\(V_T\approx 4.93\)，D005 平台约 \(58.5\)。Hsieh 同路径跟踪至 \(-986\)，不声称 \(\Omega(\sqrt{T})\)。
-- **Go：** 17a 的 \(\mathrm{LinReg}\) 随 \(\sqrt{V}\) 在 \(\eta\le 0.4\) 上升；17b 上 D005 饱和。
+- **17b** G3 \(y_t=1+\tfrac12\sin(2\pi t/\sqrt{T})\)，终端 \(V_T\approx 4.93=O(1)\)（单条 \(V_t\) 仍随 \(t\) 涨；\(O(1)\) 是 \(T_{\mathrm{per}}=\sqrt{T}\) 下的终端，且对本实例一切 \(u\) 成立），路径长 \(\approx 283\)，D005 终端约 \(58.5\)（峰值 \(61.6\) 后缓降，不是冻结）。Hsieh 同路径跟踪至 \(-986\)，不声称 \(\Omega(\sqrt{T})\)。
+- **Go：** 17a 的 \(\mathrm{LinReg}\) 随 \(\sqrt{V}\) 在 \(\eta\le 0.4\) 上升；17b 上 D005 保持 \(O(1)\)。G2（\(A=I\)）与 G3 的 \(V\) 都不依赖 \(u\)，不写成已经实验出 comparator-local 的 \(u\) 依赖性。
 
 **Step 18.（已完成） 正文与附录收口**（落实：新建议全部写进论文实验节）
 

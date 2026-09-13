@@ -63,12 +63,13 @@ python scripts/check_games_metrics.py; if ($LASTEXITCODE -ne 0) { exit $LASTEXIT
 | Hsieh 对照 | `python scripts/exp_hsieh.py` | `hsieh_G2_selfplay.*`，`hsieh_G3_const.*`，`hsieh_G2_switch.*` |
 | Hsieh 图 | `python scripts/plot_hsieh.py` | `hsieh_selfplay.*`，`hsieh_G3.*`，`hsieh_switch.*` |
 | Step 15 horizon 表 | `python scripts/exp_horizon.py` | `results/horizon_table.json`；附录 `tab:exp-horizon` |
-| Step 16 \(L_F\) sweep | `python scripts/exp_lf_sweep.py` | `exp_lf_c*.json/.npz`，`exp_lf_sweep.json` |
-| Step 16 图 | `python scripts/plot_lf_sweep.py` | `figures/exp_lf_sweep.*`；附录 `tab:exp-lf` |
+| Step 16 \(L_F\) sweep | `python scripts/exp_lf_sweep.py` | `exp_lf_c*.json/.npz`，`exp_lf_sweep.json`（表是 \(T=2\times10^4\)） |
+| Step 16 \(c=4,8\) 长跑 | `python scripts/exp_lf_sweep.py --T 100000 --c 4 8` | `exp_lf_c4_long.*`，`exp_lf_c8_long.*`（附录 \(80.76\) / \(\|x_T-a\|=0.033\)） |
+| Step 16 图 | `python scripts/plot_lf_sweep.py` | `figures/exp_lf_sweep.*`；附录 `tab:exp-lf`（有 `_long` 则叠到 \(T=10^5\)） |
 | Step 17 \(V_T\) | `python scripts/exp_vt_sweep.py` | `exp_vt17a_*.json/.npz`，`exp_vt17b_*.json/.npz` |
 | Step 17 图 | `python scripts/plot_vt_sweep.py` | `figures/exp_vt_17a.*`，`exp_vt_17b.*`；附录 `app:exp-vt` |
 
-可选：`python scripts/diag_g1_Q.py` 从 npz 打印 \(Q_t\) 诊断。`exp3_restart.py` 默认还会跑 self-play ablation；主图只需要 `--only const`。
+可选：`python scripts/diag_g1_Q.py` 从 npz 打印 \(Q_t\) 诊断（尊重 stride / `t`，不要把 `len(Q)` 当 \(T\)）。**不要**用它核 `tab:exp-horizon`；核对应走 `python scripts/exp_horizon.py`。`exp3_restart.py` 默认还会跑 self-play ablation；主图只需要 `--only const`。
 
 G3 上 D005 与 Hsieh **双方都饱和**（约 80 vs 1.2）。主图纵轴按 D005 缩放，Hsieh 贴在零轴；相对高度读终端数字，不要读成 realized \(\Omega(\sqrt{T})\)，也不要把 \(1.2<80\) 读成算法排名。Hsieh G2 self-play 图只作实现体检，不是 BoBW 对照。`check_hsieh.py` 的 \(T=4000\) 是松的 smoke，不是独立 rate 证明。
 
@@ -95,6 +96,7 @@ python scripts/plot_exp3.py
 python scripts/plot_hsieh.py
 python scripts/exp_horizon.py
 python scripts/exp_lf_sweep.py
+python scripts/exp_lf_sweep.py --T 100000 --c 4 8
 python scripts/plot_lf_sweep.py
 python scripts/exp_vt_sweep.py
 python scripts/plot_vt_sweep.py

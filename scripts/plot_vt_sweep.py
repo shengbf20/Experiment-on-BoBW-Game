@@ -52,7 +52,7 @@ def plot_17a(rows: list[dict]) -> None:
         scale = max(lins) / max(sqrtV[-1], 1e-12)
         xs = np.linspace(0.0, sqrtV[-1], 50)
         ax_s.plot(xs, scale * xs, color="0.5", ls=":", lw=1.0, label=r"$\propto\sqrt{V}$")
-    ax_s.set_xlabel(r"$\sqrt{V_T(u)}$")
+    ax_s.set_xlabel(r"$\sqrt{V_T}$")
     ax_s.set_ylabel("terminal")
     ax_s.legend(frameon=False, fontsize=8)
 
@@ -76,9 +76,22 @@ def plot_17b() -> None:
     ax_r.set_xlabel(r"$t$")
     ax_r.set_ylabel(r"$\mathrm{Reg}^x(u^\star)$")
 
-    ax_v.plot(t, h_d["V_x"], lw=1.4, color="C0", label=r"$V_t(u^\star)$")
+    ax_v.plot(t, h_d["V_x"], lw=1.4, color="C0", label=r"$V_t$")
     ax_v.set_xlabel(r"$t$")
-    ax_v.set_ylabel(r"$V_t(u^\star)$")
+    ax_v.set_ylabel(r"$V_t$")
+    V_T = float(p_d["summary"]["V"])
+    pathlen = float(p_d["summary"]["pathlen_y"])
+    ax_v.annotate(
+        rf"$V_T\approx {V_T:.2f}$ vs pathlen $\approx {pathlen:.0f}$",
+        xy=(float(t[-1]), float(np.asarray(h_d["V_x"])[-1])),
+        xytext=(-4, 8),
+        textcoords="offset points",
+        ha="right",
+        va="bottom",
+        fontsize=8,
+    )
+    _, ymax = ax_v.get_ylim()
+    ax_v.set_ylim(0.0, ymax * 1.14)
     ax_ins = ax_v.inset_axes([0.48, 0.12, 0.48, 0.38])
     n_ins = min(len(y), int(3 * p_d["summary"]["T_per"]))
     ax_ins.plot(t[:n_ins], y[:n_ins], lw=0.8, color="C1")

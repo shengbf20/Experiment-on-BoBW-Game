@@ -37,9 +37,9 @@ A 已基本站得住；B 中 Hsieh、\(L_F\) sweep 与 \(V_T\) 插值已落地�
 
    * **Exp.3 comparator 选错：** **已由 Step 11 修掉。** vs \(y\equiv e_1\) 现对诱导最优 \(x^\star\) 累计，\(V_T(x^\star)=0\)，两曲线饱和后差一个常数。
    * **Exp.2-left 负 regret 被误当成 fallback 图：** **已由 Step 12 修掉。** 主曲线改为距离与 \(V_t^x(a)\)；协议仍是连续慢正弦；claim 只讲 part D。
-   * **unknown-\(L_F\) 只有存在性：** **已由 Step 16 补 \(A=cI\) sweep（禁止谱归一化）。** \(J=1\) 对所有 \(c\)；\(\ell_T,\beta_T\) 随 \(c\) 递增。大 \(c\) 上 \(Q\) 立即冻住、regret 平台晚到（加大 \(T\)），不是 \(\sqrt{T}\)。Gaussian 附录仍然不是 \(L_F\) sweep。
-   * **\(V_T(u)\) 只有 \(V=0\) 端点：** **已由 Step 17 补。** 17a：G2 正弦幅度扫，\(\mathrm{LinReg}\) 随 \(\sqrt{V}\) 在 \(\eta\le 0.4\) 上升，更大 \(\eta\) 开始跟踪。17b：G3 非平稳 \(T_{\mathrm{per}}=\sqrt{T}\)，\(V_T\approx 4.93=O(1)\)，路径长 \(\approx 283\)，D005 平台约 \(58.5\)。Hsieh 同路径跟踪至 \(-986\)，禁止写成 \(\Omega(\sqrt{T})\)。
-   * **rate 主要靠单条曲线和参考斜率：** **已由 Step 15 补终端表。** G2 的 \(\mathrm{Reg},Q\) 从 \(T=5\times10^3\) 起冻结；G1 的 \(Q\) 在 \(10^5\) 后冻结。G2 上 \(T\cdot\mathrm{Gap}_T\) 随 \(T\) 加倍而减半（快于 \(1/T\)，不另声称指数）。
+   * **unknown-\(L_F\) 只有存在性：** **已由 Step 16 补 \(A=cI\) sweep（禁止谱归一化）。** \(J=1\) 对所有 \(c\)；\(\ell_T=\sqrt{2}\,L_F\) 是一次加倍恒等。大 \(c\) 上 \(Q\) 立即冻住；\(c=4\) 的 regret 于 \(T=10^5\) 冻在 \(80.76\)，\(c=8\) 仍在靠近（\(\|x_T-a\|=0.033\)），不是 \(\sqrt{T}\)，也还不是 late platform。Gaussian 附录仍然不是 \(L_F\) sweep。
+   * **\(V_T(u)\) 只有 \(V=0\) 端点：** **已由 Step 17 补。** 17a：G2 正弦幅度扫，\(\mathrm{LinReg}\) 随 \(\sqrt{V}\) 在 \(\eta\le 0.4\) 上升，更大 \(\eta\) 开始跟踪。17b：G3 非平稳 \(T_{\mathrm{per}}=\sqrt{T}\)，终端 \(V_T\approx 4.93=O(1)\)（单条 \(V_t\) 仍随 \(t\) 涨），路径长 \(\approx 283\)，D005 终端约 \(58.5\)（峰值 \(61.6\) 后缓降）。Hsieh 同路径跟踪至 \(-986\)，禁止写成 \(\Omega(\sqrt{T})\)。G2（\(A=I\)）与 G3 的 \(V\) 都不依赖 \(u\)，不是 comparator-local \(u\) 依赖性的实验。
+   * **rate 主要靠单条曲线和参考斜率：** **已由 Step 15 补终端表。** G2 的 \(\mathrm{Reg},Q\) 从 \(T=5\times10^3\) 起冻结；G1 的 \(Q\) 相对短窗已进入平台（\(0.3425\to 0.3433\) 仍有残差）。G2 上 \(t\cdot\mathrm{Gap}_t\) 随 \(t\) 加倍而减半是本实例 \(1/T^2\)，与 \(O(1/T)\) 上界数量级相容，不另声称指数，也不是 Figure 1 虚线斜率。G1 中行标 \(t=99991\)。
    * **没有 literature baseline：** **已由 Step 13 落实 Hsieh OptDA。** G2 self-play 平台（实现有效）。G3 上 D005 \(\approx 80\)、Hsieh \(\approx 1.2\)，**双方饱和**；switch 上两条距离都有界。禁止把这解读成 realized \(\Omega(\sqrt{T})\)，也禁止把 self-play 两平台并排当 BoBW。
    * **闭式贡献没有实验。** `check_closedform.py` 只验证 `radial_q` 可逆与数值稳定，并不独立求解 FTRL argmin。\(O(d)\) 是理论卖点，实验空白；可保持省略，但不要写成「已经对拍过闭式更新」。
    * **复现性：内部合同齐，对外入口已补。** `SPEC.md`、`PLAN.md`、`configs/default.yaml`、`experiment/README.md`。新 run 写 compact summary + npz；旧的数 MB 全程 json 已剥离。外层仓库仍 gitignore 整个 `experiment/`。
@@ -67,7 +67,7 @@ A 已基本站得住；B 中 Hsieh、\(L_F\) sweep 与 \(V_T\) 插值已落地�
 
    修完 Step 13 且 G3 对照方向正确之后，可以写 D005 vs Hsieh 的真实 regret，并删除 “no other algorithm is shown”。在此之前比较仍应限制为 theorem statements。
 
-   修完 Step 16–17 之后，附录可以写 finite doubling tracks realized smoothness，以及 regret 随 \(\sqrt{V_T(u)}\) 变化。
+   修完 Step 16–17 之后，附录可以写 finite doubling tracks realized smoothness，以及 linearized regret 随 \(\sqrt{V_T}\) 变化（本实例 \(V\) 不依赖 \(u\)）。
 
    全程不建议写未经对照支撑的 “comprehensively validate superiority”。若 G3 上 Hsieh 也饱和，必须写入 limitations。
 
