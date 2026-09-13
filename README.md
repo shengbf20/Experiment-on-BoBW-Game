@@ -7,12 +7,20 @@
 
 - `experiment_pruning_plan.md`：现有实验的保留、删除与精简范围；
 - `separation_experiment_plan.md`：后续 Separation Example 的实验步骤与产出；
-- `../note/sections/appendix_a.tex`：Separation Example 的精确博弈、open-loop
-  opponent 递归和 comparator 定义；
+- `../note/v1/appendix_a.tex`：Separation Example 的精确构造与渐近证明；
+- `src/separation.py`：Separation Example 的博弈、open-loop opponent 递归和
+  comparator 定义（独立于 G1/G2）；
 - `src/` 与 `scripts/check_*.py`：当前 D005 实现及可执行不变量检查。
 
-Separation Example 尚未创建或运行，也没有被混入现有实验入口。旧 stationary G3
-不能作为该实验的替代实现。
+Separation Example 的 Part A 入口是 `scripts/exp_separation.py`，不会改写
+Exp.1–3 或 L_F sweep 的结果。旧 stationary G3 不能作为该实验的替代实现。
+
+Part A 已收口：冻结回放、精确 (V_T(u^\star)=1)、有界 (G_T) 与正的线性 tail
+机制均通过。计划 horizon (T\le2\times10^4) 上，原始 (E_T\) 仍由常数瞬态主导，
+因此不声称数值曲线直接观察到 (E_T=\Theta(T))。唯一正式候选图只展示真实的 tail
+contribution，并明确它是机制诊断而非实际 certificate。各 NPZ 已保存冻结的 `y`，
+汇总同时记录其 `frozen_y_sha256`。Part B 必须直接回放并核对这些序列，不得重新按
+baseline 轨迹构造 opponent。
 
 ## 当前实验结构
 
@@ -55,6 +63,7 @@ python scripts/check_doubling.py
 python scripts/check_closedform.py
 python scripts/check_restart.py
 python scripts/check_io_results.py
+python scripts/check_separation.py
 ```
 
 ## 复现实验
@@ -67,6 +76,7 @@ python scripts/exp2_bobw.py
 python scripts/exp3_restart.py
 python scripts/exp_lf_sweep.py
 python scripts/exp_lf_sweep.py --T 100000 --c 4
+python scripts/exp_separation.py
 ```
 
 以下命令只读取已有结果并作图，不重跑 learner：
@@ -77,6 +87,8 @@ python scripts/plot_exp2.py
 python scripts/plot_exp3.py
 python scripts/exp_lf_sweep.py --assemble
 python scripts/plot_lf_sweep.py
+python scripts/exp_separation.py --assemble
+python scripts/plot_separation.py
 ```
 
 主要产物：
@@ -88,3 +100,4 @@ python scripts/plot_lf_sweep.py
 | Same-run switch G2 | `results/exp2_G2_switch.*` | `figures/exp2_bobw.*` |
 | Warm vs restart | `results/exp3_const_{warm,restart}.*` | `figures/exp3_restart.*` |
 | Unknown-\(L_F\) | `results/exp_lf_c*.*`、`exp_lf_sweep.json` | `figures/exp_lf_sweep.*` |
+| Separation Part A | `results/exp_sep_T*.*`、`exp_sep_partA.json` | `figures/exp_sep_partA.*` |
