@@ -65,7 +65,7 @@ def plot_part_a(rows: list[dict], verdict: dict) -> None:
     )
     ax.set_xlabel(r"$T$")
     ax.set_ylabel("terminal value")
-    ax.set_title(r"Raw separation: $V_T,G_T=O(1)$; $E_T\propto T$")
+    ax.set_title(r"Finite-horizon separation of $V_T(u^\star)$ and $E_T$")
     ax.legend(frameon=False, fontsize=8)
 
     ax = axes[1]
@@ -111,8 +111,10 @@ def plot_part_a(rows: list[dict], verdict: dict) -> None:
     fig.text(
         0.5,
         -0.02,
-        rf"Raw-$E_T$ log--log slope on $10^4\leq T\leq10^5$: {verdict['loglog_slope_E_vs_T_target_window']:.3f}; "
-        rf"theory $c={THEORY_LATE_DG2:.3g}$.",
+        rf"$E_T$ shows near-linear growth on $10^4\leq T\leq10^5$ "
+        rf"(log--log slope ${verdict['loglog_slope_E_vs_T_target_window']:.3f}$); "
+        rf"$E_T/T$ approaches $c={THEORY_LATE_DG2:.3g}$. "
+        r"Asymptotic $\Theta(T)$ is from Appendix A, not the finite-horizon fit.",
         ha="center",
         fontsize=8,
     )

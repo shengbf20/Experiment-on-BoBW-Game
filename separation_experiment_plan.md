@@ -29,8 +29,10 @@ u^\star=\frac14,\qquad \eta=\delta_\star.
 
 平移使 prescribed initialization \(x_1=0\) 更接近 comparator，且
 \(u^\star\ne0\) 仍保留 \(\|u^\star\|\sqrt{E_T}\) 的 polynomial order。
-增大 \(\eta\) 将理论平方跳变常数放大 \(16^2\) 倍。Appendix A 已同步给出
-strict convex-concavity、唯一 best comparator 和正密度 annulus 的证明。
+增大 \(\eta\) 将理论平方跳变常数放大 \(16^2\) 倍。仓库已检查改进后的
+convexity/concavity margins、\(\eta=\delta_\star\) 以及 \(13/48\) annulus
+fraction 仍为正；这只说明没有发现 construction 修改导致这些证明条件失效，
+不是对 Appendix A 全文的完整审计。`../note/v1/appendix_a.tex` 是当前证明文本。
 
 ### 2.1 协议
 
@@ -105,10 +107,24 @@ E_T\approx C+cT,\qquad C\approx1.06,
 
 ### 2.4 论文可用叙述
 
-可以声称：在 \(10^4\)–\(10^5\) 的有限 horizon 上，冻结的合法 trajectory 已直接
-显示 \(V_T(u^\star)=1\)、\(G_T=O(1)\) 和原始 \(E_T\) 的近线性增长。这使该图具备
-正文候选资格；最终正文措辞仍应写成 finite-horizon evidence，并由 Appendix A
-提供严格的渐近 \(\Theta(T)\) 结论。
+正文 5.3 应题为 **Finite-Horizon Illustration of the Separation Example**，
+只报告：
+
+\[
+V_T(u^\star)=1,\qquad G_T=O(1),
+\]
+
+以及 \(E_T\) exhibits near-linear finite-horizon growth over
+\(10^4\le T\le 10^5\)，with \(E_T/T\) approaching a positive constant。
+\(\sqrt{E_T}\) 的增长可写成与渐近 \(\Theta(\sqrt T)\) prediction consistent，
+但实验并不 establishes 该 rate。紧接着写：
+
+> The rigorous asymptotic statement \(E_T=\Theta(T)\), and hence the
+> \(\Theta(\sqrt T)\) scaling of the corresponding last-gradient term,
+> follows from Section 4 / Appendix A rather than from the finite-horizon fit.
+
+不要写“\(E_T\) 贴 \(cT\)”：\(T=10^4\) 时仍有明显 transient，到 \(10^5\) 才相当接近。
+图标题使用 finite-horizon separation，不要写成 \(E_T\propto T\)。
 
 实际 regret \(R_T(u^\star)\) 只保留在结果中；负 regret 合法，但不用于证明其绝对值
 为 \(O(1)\)，也不用于算法排名。
@@ -118,7 +134,8 @@ E_T\approx C+cT,\qquad C\approx1.06,
 - `results/exp_sep_T*.json/.npz`：每个 horizon 的摘要、冻结 \(y\) 和完整轨迹；
 - `results/exp_sep_partA.json`：分层 verdict；
 - `figures/exp_sep_partA.pdf/.png`：唯一正式候选图，展示原始
-  \(V_T,G_T,E_T\)、\(E_T/T\) 的稳定化和最长 horizon 的两段 settled trajectory。
+  \(V_T,G_T,E_T\)、\(E_T/T\) 趋向正常数，以及最长 horizon 的两段 settled trajectory。
+  左图标题为 finite-horizon separation of \(V_T(u^\star)\) and \(E_T\)。
 
 旧版 construction 的冻结序列和三张诊断图不再保留。图中展示的是实际原始
 \(E_T\)，没有把 tail proxy 伪装成 certificate。
@@ -129,7 +146,7 @@ E_T\approx C+cT,\qquad C\approx1.06,
 
 ### 3.1 开始条件
 
-Part A 已满足开始 Part B 所需条件：每个 NPZ 都保存了冻结的 `y`，无需重新生成
+Part A 已正式收尾：措辞与 `../note/skeleton.md` §5.3 对齐，每个 NPZ 都保存了冻结的 `y`，无需重新生成
 opponent，也不得依据 Hsieh 的轨迹修改该 sequence。汇总中的每一行同时记录规范化
 `frozen_y_sha256`；Part B 读取 `y` 后必须复算并核对该 hash。
 
@@ -173,4 +190,5 @@ python scripts/exp_separation.py --assemble
 python scripts/plot_separation.py
 ```
 
-Part B 尚无执行入口；下一阶段从读取现有冻结 `y` 和隔离实现 baseline 开始。
+Part B 尚无执行入口。Part A 的措辞与冻结输入已收口；下一阶段从读取现有冻结 `y`
+和隔离实现 baseline 开始，不得按 baseline 轨迹重新构造 opponent。

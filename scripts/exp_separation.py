@@ -257,8 +257,10 @@ def _assemble(rows: list[dict], cfg: dict) -> dict:
         "main_text_candidate": run_ok and proof_conditions_ok and e_mechanism and e_raw_theta,
         "part_B_inputs_ready": run_ok and proof_conditions_ok and all(len(r["frozen_y_sha256"]) == 64 for r in rows),
         "claim_scope": (
-            "finite-horizon validation of the frozen replay, V_T=1, bounded G_T, "
-            "the positive linear tail mechanism, and a separate raw-E_T scaling test"
+            "finite-horizon evidence: V_T=1, G_T=O(1), and near-linear raw-E_T "
+            "growth on 1e4-1e5 with E_T/T approaching a positive constant; "
+            "sqrt(E_T) is consistent with the Theta(sqrt(T)) prediction but does "
+            "not establish that rate; asymptotics are from Appendix A"
         ),
     }
     payload = {
