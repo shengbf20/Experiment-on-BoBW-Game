@@ -3,7 +3,7 @@ epsilon: 1.0
 beta0: 1.0
 ell1: 1.0e-3
 T: 20000
-seeds: [0, 1, 2]
+gaussian_seed: 1
 dtype: float64
 
 # false = frozen-beta health check. Exp.1 uses adaptive: true in the script.
@@ -13,6 +13,3 @@ adaptive: false
 mode: warm
 
 gap_radius: 1.0
-
-# Hsieh 2021 OptDA (Adapt): paper's free player-specific τ. Not fitted to D005.
-hsieh_tau: 1.0

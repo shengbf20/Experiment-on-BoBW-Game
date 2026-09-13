@@ -13,7 +13,6 @@ sys.path.insert(0, str(ROOT / "src"))
 from games import (  # noqa: E402
     BilinearGame,
     QuadraticGame,
-    SeparationGame,
     paper_saddle,
 )
 from metrics import RunningMetrics  # noqa: E402
@@ -24,38 +23,14 @@ def _assert_close(a, b, tag: str, atol: float = 1e-10):
         raise AssertionError(f"{tag}: {a} vs {b}")
 
 
-def test_saddles_and_g3_stationarity():
+def test_saddles():
     g1 = BilinearGame(dim=10)
     g2 = QuadraticGame(dim=10, mu=0.2)
-    g3 = SeparationGame()
-    for game in (g1, g2, g3):
+    for game in (g1, g2):
         xs, ys = game.saddle()
         gx, gy = game.feedback(xs, ys)
         _assert_close(gx, 0.0, f"{game.name} F^x(saddle)")
         _assert_close(gy, 0.0, f"{game.name} F^y(saddle)")
-    u = g3.comparator_x()
-    gx_star = g3.grad_x_phi(u, np.array([1.0]))
-    _assert_close(gx_star, 0.0, "G3 ∇xΦ(u*, 1)")
-
-
-def test_g3_constant_opponent_metrics():
-    game = SeparationGame()
-    m = RunningMetrics(game, radius=1.0)
-    x = np.zeros(1)
-    y = np.array([1.0])
-    for _ in range(50):
-        gx, gy = game.feedback(x, y)
-        m.step(x, y, gx, gy)
-    if m.V_x != 0.0:
-        raise AssertionError(f"G3 V_x(u*) should be 0, got {m.V_x}")
-    if not (1.0 - 1e-12 <= m.G_x <= 3.0):
-        raise AssertionError(f"G3 G_x on x=0,y=1 should be 1, got {m.G_x}")
-    rng = np.random.default_rng(0)
-    for _ in range(20):
-        xx = rng.normal(size=1)
-        gx, _ = game.feedback(xx, y)
-        if float(np.abs(gx[0])) > 3.0 + 1e-12:
-            raise AssertionError(f"|g^x| > 3 at x={xx}")
 
 
 def test_incremental_matches_batch():
@@ -169,8 +144,7 @@ def test_shifted_g1_gap_and_gaussian_norm():
 
 
 def main():
-    test_saddles_and_g3_stationarity()
-    test_g3_constant_opponent_metrics()
+    test_saddles()
     test_incremental_matches_batch()
     test_g1_gap_and_linreg_identity()
     test_g2_gap_unconstrained_and_boundary()

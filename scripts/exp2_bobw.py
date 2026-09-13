@@ -1,4 +1,4 @@
-"""Exp.2: same-run switch (2a) and G3 constant-opponent separation (2b)."""
+"""Same-run G2 switch with no reset or regime detection."""
 
 from __future__ import annotations
 
@@ -14,7 +14,6 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from games import (  # noqa: E402
     QuadraticGame,
-    SeparationGame,
     assert_saddle_comparator,
     paper_saddle,
 )
@@ -50,63 +49,7 @@ def _dump_switch(tag: str, payload: dict, hist: dict) -> None:
     )
 
 
-def run_2b(cfg: dict, T: int, radius: float) -> dict:
-    game = SeparationGame()
-    px = _player(1, cfg)
-    # Paper initialization: x_1 = 0. Constant opponent y_t = 1 is not a rest point.
-
-    def y_policy(_t, _x):
-        return np.array([1.0], dtype=_DTYPE)
-
-    metrics, hist, max_w = run_loop(
-        game, px, T, y_policy=y_policy, player_y=None, observe_y=lambda _t: False, radius=radius
-    )
-    v = np.asarray(hist["V_x"], dtype=float)
-    if np.any(v != 0.0):
-        raise AssertionError(f"G3 V_x(u*) must be exactly 0, got max {v.max()}")
-    gT = hist["G_x"][-1]
-    # Lower bound 1 comes from the origin init: g_1 = 2*0/sqrt(1+0) + 1 = 1
-    # exactly. Changing the init makes this assertion spuriously fail.
-    if not (1.0 - 1e-12 <= gT <= 3.0):
-        raise AssertionError(f"G3 G_x should lie in [1, 3], got {gT}")
-    if max_w >= 1e20:
-        raise AssertionError(f"G3 exploded max_w={max_w}")
-    if px.t != T:
-        raise AssertionError("player x must run the full horizon")
-    payload = {
-        "meta": {
-            "tag": "G3_const",
-            "game": "G3",
-            "opponent": "const y=1",
-            "T": T,
-            "adaptive": True,
-            "epsilon": float(cfg["epsilon"]),
-            "beta0": float(cfg["beta0"]),
-            "ell1": float(cfg["ell1"]),
-            "comparator": "u_star",
-            "init": "origin",
-        },
-        "summary": {
-            "max_w": max_w,
-            "reg_x_T": hist["reg_x"][-1],
-            "V_x_T": hist["V_x"][-1],
-            "G_x": metrics.G_x,
-            "J_x": hist["J_x"][-1],
-            "beta_x": hist["beta_x"][-1],
-            "gamma_x": px.gamma,
-        },
-    }
-    dump_compact(
-        "exp2_G3_const",
-        payload,
-        hist,
-        keys=("reg_x", "V_x", "G_x", "x_norm", "J_x"),
-    )
-    print(payload["summary"])
-    return payload
-
-
-def run_2a(cfg: dict, T: int, radius: float, dim: int = 10) -> dict:
+def run_switch(cfg: dict, T: int, radius: float, dim: int = 10) -> dict:
     sx, sy = paper_saddle(dim)
     game = QuadraticGame(dim=dim, mu=0.2, saddle_x=sx, saddle_y=sy)
     px, py = _player(dim, cfg), _player(dim, cfg)
@@ -213,15 +156,11 @@ def run_2a(cfg: dict, T: int, radius: float, dim: int = 10) -> dict:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--T", type=int, default=None)
-    parser.add_argument("--only", choices=["2a", "2b", "both"], default="both")
     args = parser.parse_args()
     cfg = _load_cfg()
     T = int(args.T if args.T is not None else cfg["T"])
     radius = float(cfg["gap_radius"])
-    if args.only in ("2b", "both"):
-        run_2b(cfg, T, radius)
-    if args.only in ("2a", "both"):
-        run_2a(cfg, T, radius)
+    run_switch(cfg, T, radius)
 
 
 if __name__ == "__main__":

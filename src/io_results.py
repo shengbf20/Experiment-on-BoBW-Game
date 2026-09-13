@@ -13,7 +13,7 @@ RESULTS = ROOT / "results"
 _DTYPE = np.float64
 LONG_STRIDE = 10
 
-# Curves needed by plotters and by the Step 15 horizon table.
+# Curves used by the retained experiment plotters.
 CURVE_KEYS = (
     "reg_x",
     "reg_y",

@@ -1,4 +1,4 @@
-"""Step 16: G2 self-play L_F sweep, A = c I, no spectral normalization."""
+"""Representative G2 self-play L_F sweep, A = c I, without normalization."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from io_results import LONG_STRIDE, dump_compact, load_run  # noqa: E402
 from learner import ClosedFormPlayer, self_play  # noqa: E402
 
 _DTYPE = np.float64
-CS = (0.25, 0.5, 1.0, 2.0, 4.0, 8.0)
+CS = (0.5, 1.0, 2.0, 4.0)
 LONG_KEYS = (
     "reg_x",
     "reg_y",

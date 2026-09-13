@@ -1,4 +1,4 @@
-"""Plot Exp.2 from saved json/npz. Does not rerun the learner."""
+"""Plot the retained same-run switch result without rerunning the learner."""
 
 from __future__ import annotations
 
@@ -51,17 +51,12 @@ def period_max(t, y, t0: int, period: int):
 
 def main():
     sw, h2a = _load("G2_switch")
-    sep, h2b = _load("G3_const")
     T2a = len(h2a["V_x"] if "V_x" in h2a else h2a["reg_x"])
-    T2b = len(h2b["reg_x"])
     t2a = np.arange(1, T2a + 1)
-    t2b = np.arange(1, T2b + 1)
     half = int(sw["meta"]["half"])
     period = int(sw["meta"].get("period", 200))
 
-    fig, axes = plt.subplots(1, 2, figsize=(9.2, 3.4), layout="constrained")
-
-    ax = axes[0]
+    fig, ax = plt.subplots(figsize=(5.2, 3.4), layout="constrained")
     # Signed Reg^x(a) is in the json; do not put it back on these axes.
     pre = t2a <= half
     (l_y,) = ax.plot(
@@ -108,34 +103,6 @@ def main():
     axins.set_xticks([t0, t1])
     axins.tick_params(labelsize=7)
     axins.set_title(r"$T/2$ to $+3$ periods", fontsize=7, pad=1)
-
-    ax = axes[1]
-    ax.plot(t2b, h2b["reg_x"], color="C0", lw=1.4, label="D005")
-    hsieh_npz = ROOT / "results" / "hsieh_G3_const.npz"
-    rh = None
-    th = None
-    if hsieh_npz.is_file():
-        hh = np.load(hsieh_npz)
-        rh = np.asarray(hh["reg_x"])
-        th = np.arange(1, len(rh) + 1)
-        ax.plot(th, rh, color="C1", lw=1.4, ls="--", label="Hsieh OptDA")
-    scale = abs(h2b["reg_x"][min(99, T2b - 1)]) / np.sqrt(min(100, T2b))
-    if scale > 0:
-        ax.plot(t2b, scale * np.sqrt(t2b), color="0.5", ls=":", lw=1.0, label=r"$\propto\sqrt{t}$")
-    ax.set_xlabel(r"$t$")
-    ax.set_ylabel(r"$\mathrm{Reg}^x(u^\star)$")
-    ax.set_title(r"G3 constant opponent, $V_T(u^\star)=0$")
-    ax.legend(frameon=False, fontsize=8, loc="upper left")
-    d005_T = float(h2b["reg_x"][-1])
-    ax.text(0.52, 0.42, rf"D005 $\approx {d005_T:.0f}$", transform=ax.transAxes, fontsize=8, color="C0")
-    if rh is not None:
-        axins = ax.inset_axes([0.48, 0.12, 0.48, 0.22])
-        axins.set_facecolor("white")
-        axins.plot(th, rh, color="C1", lw=1.3, ls="--")
-        axins.set_ylim(0.0, 2.0)
-        axins.set_xlim(1.0, float(len(rh)))
-        axins.set_title(rf"Hsieh $\approx {float(rh[-1]):.1f}$", fontsize=7, pad=1)
-        axins.tick_params(labelsize=6)
 
     out_pdf = ROOT / "figures" / "exp2_bobw.pdf"
     out_png = ROOT / "figures" / "exp2_bobw.png"

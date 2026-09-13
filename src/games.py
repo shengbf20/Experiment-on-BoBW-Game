@@ -1,4 +1,4 @@
-"""G1 bilinear, G2 quadratic, G3 separation example.
+"""G1 bilinear and G2 quadratic games.
 
 Feedback matches eq:feedback: gx = ∇x Φ, gy = −∇y Φ.
 Constructors default to saddle (0,0) for health checks. Paper runs pass
@@ -232,58 +232,10 @@ class QuadraticGame(Game):
         return float(sup - inf)
 
 
-class SeparationGame(Game):
-    """Appendix A: Φ = 2√(1+x²) + xy − y²/2. Comparator u* = −1/√3 against y ≡ 1."""
-
-    name = "G3"
-    dim_x = 1
-    dim_y = 1
-    u_star = -1.0 / np.sqrt(3.0)
-
-    def phi(self, x, y) -> float:
-        x = float(_vec(x, 1)[0])
-        y = float(_vec(y, 1)[0])
-        return float(2.0 * np.sqrt(1.0 + x * x) + x * y - 0.5 * y * y)
-
-    def grad_x_phi(self, x, y) -> np.ndarray:
-        x = float(_vec(x, 1)[0])
-        y = float(_vec(y, 1)[0])
-        return np.array([2.0 * x / np.sqrt(1.0 + x * x) + y], dtype=_DTYPE)
-
-    def grad_y_phi(self, x, y) -> np.ndarray:
-        x = float(_vec(x, 1)[0])
-        y = float(_vec(y, 1)[0])
-        return np.array([x - y], dtype=_DTYPE)
-
-    def comparator_x(self) -> np.ndarray:
-        return np.array([self.u_star], dtype=_DTYPE)
-
-    def restricted_gap(self, x, y, radius: float) -> float:
-        x = float(_vec(x, 1)[0])
-        y = float(_vec(y, 1)[0])
-        r = float(radius)
-        v = np.clip(x, -r, r)
-        sup = 2.0 * np.sqrt(1.0 + x * x) + x * v - 0.5 * v * v
-        k = -0.5 * y
-        if abs(k) < 1.0:
-            u0 = k / np.sqrt(1.0 - k * k)
-            u = float(np.clip(u0, -r, r))
-        elif y >= 2.0:
-            u = -r
-        else:
-            u = r
-        inf = 2.0 * np.sqrt(1.0 + u * u) + u * y - 0.5 * y * y
-        return float(sup - inf)
-
-
 def make_game(name: str, **kwargs) -> Game:
     key = name.strip().upper()
     if key in {"G1", "BILINEAR"}:
         return BilinearGame(**kwargs)
     if key in {"G2", "QUADRATIC"}:
         return QuadraticGame(**kwargs)
-    if key in {"G3", "SEPARATION"}:
-        if kwargs:
-            raise TypeError("SeparationGame takes no constructors args")
-        return SeparationGame()
     raise ValueError(f"unknown game {name!r}")

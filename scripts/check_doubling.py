@@ -136,9 +136,6 @@ def main():
         "max_w": max_w,
         "G_cum_norm_x": float(np.linalg.norm(px.G_cum)),
     }
-    out = ROOT / "results" / "doubling_g2.json"
-    out.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-
     if max_w >= 1e20:
         raise AssertionError(f"iterate exploded: {max_w}")
     print("doubling checks passed")

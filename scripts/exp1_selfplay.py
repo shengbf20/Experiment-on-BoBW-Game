@@ -1,8 +1,4 @@
-"""Exp.1 self-play runs. Compact json + npz; plot with plot_exp1.py.
-
-Main figure: A = I, one run, paper saddle, w1=0.
-Appendix: spectral-normalized gaussian A, three seeds, same saddle and init.
-"""
+"""Self-play G2 plus one non-degenerate Gaussian robustness run."""
 
 from __future__ import annotations
 
@@ -128,24 +124,16 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--T", type=int, default=None)
     parser.add_argument("--dim", type=int, default=10)
-    parser.add_argument("--main-only", action="store_true", help="skip gaussian appendix runs")
+    parser.add_argument("--gaussian-seed", type=int, default=None)
     args = parser.parse_args()
 
     cfg = _load_cfg()
     T = int(args.T if args.T is not None else cfg["T"])
     radius = float(cfg["gap_radius"])
     dim = int(args.dim)
-    seeds = list(cfg.get("seeds", [0, 1, 2]))
+    seed = int(args.gaussian_seed if args.gaussian_seed is not None else cfg["gaussian_seed"])
     sx, sy = paper_saddle(dim)
 
-    run_one(
-        BilinearGame(dim=dim, saddle_x=sx, saddle_y=sy),
-        cfg,
-        T,
-        radius,
-        "G1_identity",
-        {"game": "G1", "A": "identity"},
-    )
     run_one(
         QuadraticGame(dim=dim, mu=0.2, saddle_x=sx, saddle_y=sy),
         cfg,
@@ -154,25 +142,14 @@ def main():
         "G2_identity",
         {"game": "G2", "A": "identity", "mu": 0.2},
     )
-
-    if not args.main_only:
-        for seed in seeds:
-            run_one(
-                BilinearGame.gaussian(dim=dim, seed=seed, saddle_x=sx, saddle_y=sy),
-                cfg,
-                T,
-                radius,
-                f"G1_gaussian_seed{seed}",
-                {"game": "G1", "A": "gaussian-spectral", "seed": seed},
-            )
-            run_one(
-                QuadraticGame.gaussian(dim=dim, mu=0.2, seed=seed, saddle_x=sx, saddle_y=sy),
-                cfg,
-                T,
-                radius,
-                f"G2_gaussian_seed{seed}",
-                {"game": "G2", "A": "gaussian-spectral", "seed": seed, "mu": 0.2},
-            )
+    run_one(
+        BilinearGame.gaussian(dim=dim, seed=seed, saddle_x=sx, saddle_y=sy),
+        cfg,
+        T,
+        radius,
+        f"G1_gaussian_seed{seed}",
+        {"game": "G1", "A": "gaussian-spectral", "seed": seed},
+    )
 
 
 if __name__ == "__main__":

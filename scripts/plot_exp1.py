@@ -1,14 +1,13 @@
-"""Plot Exp.1 from saved json/npz. Does not rerun the learner."""
+"""Plot retained self-play results without rerunning the learner."""
 
 from __future__ import annotations
 
-import argparse
-import json
 import sys
 from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -59,39 +58,10 @@ def _panel_row(axes, hist: dict, title: str, t=None) -> None:
     ax_q.set_ylabel(r"$Q_t^{\mathrm{obs}}$")
 
 
-def _load_g1_long() -> tuple[dict, np.ndarray, int]:
-    npz_path = ROOT / "results" / "exp1_G1_identity_long.npz"
-    json_path = ROOT / "results" / "exp1_G1_identity_long.json"
-    if not npz_path.is_file() or not json_path.is_file():
-        raise FileNotFoundError("missing G1 long run; run exp1_g1_long.py first")
-    data = np.load(npz_path)
-    meta = json.loads(json_path.read_text(encoding="utf-8"))
-    if "t" in data:
-        t = np.asarray(data["t"], dtype=float)
-    else:
-        stride = int(data["stride"][0])
-        t = 1.0 + stride * np.arange(len(data["Q"]))
-    hist = {
-        "reg_x": np.asarray(data["reg_x"], dtype=float),
-        "reg_y": np.zeros(len(data["Q"]), dtype=float),
-        "gap": np.asarray(data["gap"], dtype=float),
-        "Q": np.asarray(data["Q"], dtype=float),
-    }
-    T = int(meta.get("T") or meta.get("summary", {}).get("T") or int(data["T"][0]))
-    return hist, t, T
-
-
 def plot_main() -> None:
     g2 = _load("G2_identity")
-    g1_hist, g1_t, g1_T = _load_g1_long()
-    fig, axes = plt.subplots(2, 3, figsize=(10.5, 6.2), layout="constrained")
-    _panel_row(axes[0], g2["hist"], r"G2 identity, $T=2\times 10^4$")
-    _panel_row(
-        axes[1],
-        g1_hist,
-        r"G1 identity, $T=2\times 10^5$",
-        t=g1_t,
-    )
+    fig, axes = plt.subplots(1, 3, figsize=(10.5, 3.2), layout="constrained")
+    _panel_row(axes, g2["hist"], r"G2 identity, $T=2\times 10^4$")
     out_pdf = ROOT / "figures" / "exp1_selfplay.pdf"
     out_png = ROOT / "figures" / "exp1_selfplay.png"
     fig.savefig(out_pdf)
@@ -101,29 +71,22 @@ def plot_main() -> None:
     print(f"wrote {out_png}")
 
 
-def plot_appendix(game: str, seeds: list[int]) -> None:
+def plot_gaussian(seed: int) -> None:
     fig, axes = plt.subplots(1, 3, figsize=(10.5, 3.2), layout="constrained")
-    styles = ["-", "--", "-."]
-    hist0 = None
-    for seed, ls in zip(seeds, styles):
-        data = _load(f"{game}_gaussian_seed{seed}")
-        hist = data["hist"]
-        hist0 = hist0 or hist
-        T = len(hist["reg_x"])
-        t = np.arange(1, T + 1)
-        axes[0].plot(t, hist["reg_x"], lw=1.2, ls=ls, label=f"seed {seed}")
-        gap = np.maximum(np.asarray(hist["gap"], dtype=float), 1e-16)
-        axes[1].loglog(t, gap, lw=1.2, ls=ls, label=f"seed {seed}")
-        axes[2].plot(t, hist["Q"], lw=1.2, ls=ls, label=f"seed {seed}")
-    axes[0].set_title(f"{game} spectral-normalized gaussian A")
+    hist = _load(f"G1_gaussian_seed{seed}")["hist"]
+    t = np.arange(1, len(hist["reg_x"]) + 1)
+    axes[0].plot(t, hist["reg_x"], lw=1.2)
+    gap = np.maximum(np.asarray(hist["gap"], dtype=float), 1e-16)
+    axes[1].loglog(t, gap, lw=1.2)
+    axes[2].plot(t, hist["Q"], lw=1.2)
+    axes[0].set_title(f"G1 spectral-normalized Gaussian A (seed {seed})")
     axes[0].set_ylabel(r"$\mathrm{Reg}^x(a)$")
     axes[1].set_ylabel("restricted gap")
     axes[2].set_ylabel(r"$Q_t^{\mathrm{obs}}$")
     for ax in axes:
         ax.set_xlabel(r"$t$")
-        ax.legend(frameon=False, fontsize=8)
-    out = ROOT / "figures" / f"exp1_{game}_gaussian.pdf"
-    out_png = ROOT / "figures" / f"exp1_{game}_gaussian.png"
+    out = ROOT / "figures" / "exp1_G1_gaussian.pdf"
+    out_png = ROOT / "figures" / "exp1_G1_gaussian.png"
     fig.savefig(out)
     fig.savefig(out_png, dpi=160)
     plt.close(fig)
@@ -132,14 +95,10 @@ def plot_appendix(game: str, seeds: list[int]) -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--appendix", action="store_true")
-    parser.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
-    args = parser.parse_args()
+    with (ROOT / "configs" / "default.yaml").open(encoding="utf-8") as f:
+        seed = int(yaml.safe_load(f)["gaussian_seed"])
     plot_main()
-    if args.appendix:
-        plot_appendix("G1", args.seeds)
-        plot_appendix("G2", args.seeds)
+    plot_gaussian(seed)
 
 
 if __name__ == "__main__":

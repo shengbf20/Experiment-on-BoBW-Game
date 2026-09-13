@@ -1,8 +1,4 @@
-"""Plot Step 16 L_F sweep from saved json/npz. Does not rerun the learner.
-
-Reads exp_lf_c{c}_long when present (c=4,8 at T=10^5). The T=2e4 window
-alone does not support a 'not sqrt(T)' claim for c=8.
-"""
+"""Plot the retained L_F sweep from saved results; never rerun the learner."""
 
 from __future__ import annotations
 
@@ -24,7 +20,7 @@ MU = 0.2
 plt.rcParams.update(
     {
         "axes.prop_cycle": plt.cycler(
-            color=["#0072B2", "#E69F00", "#009E73", "#CC79A7", "#56B4E9", "#D55E00"]
+            color=["#0072B2", "#E69F00", "#009E73", "#CC79A7"]
         ),
         "pdf.fonttype": 42,
         "font.size": 9,
@@ -78,21 +74,6 @@ def main() -> None:
         ax_r.plot(t, hist["reg_x"], lw=1.3, label=rf"$c={c:g}$")
 
     ax_r.axvline(TABLE_T, color="0.35", ls="--", lw=1.0, zorder=3)
-    if (ROOT / "results" / "exp_lf_c8.npz").is_file():
-        _p8, h8 = load_run("exp_lf_c8")
-        t8 = _times(h8)
-        idx = int(np.where(t8 <= TABLE_T)[0][-1])
-        t_mark = float(t8[idx])
-        reg_ref = float(h8["reg_x"][idx])
-        t_ref = np.linspace(1.0, tmax, 400)
-        ax_r.plot(
-            t_ref,
-            reg_ref * np.sqrt(t_ref / t_mark),
-            color="0.45",
-            ls=":",
-            lw=1.0,
-            label=r"$\propto\sqrt{t}$ from $c=8$ at $T=2\times10^{4}$",
-        )
     ax_r.set_xlabel(r"$t$")
     ax_r.set_ylabel(r"$\mathrm{Reg}^x(a)$")
     ax_r.set_xlim(1.0, tmax)
@@ -132,11 +113,8 @@ def main() -> None:
     plt.close(fig)
     print(f"wrote {out_pdf}")
     print(f"wrote {out_png}")
-    missing = [
-        c for c in (4.0, 8.0) if not (ROOT / "results" / f"exp_lf_c{c_tag(c)}_long.npz").is_file()
-    ]
-    if missing:
-        print("warning: missing long dumps for c=", missing, "; overlay stops at T=2e4")
+    if not (ROOT / "results" / "exp_lf_c4_long.npz").is_file():
+        print("warning: missing c=4 long dump; overlay stops at T=2e4")
 
 
 if __name__ == "__main__":

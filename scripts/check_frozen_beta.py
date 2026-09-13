@@ -119,9 +119,6 @@ def main():
         "saddle": [sx, sy],
         "init": "origin",
     }
-    out = ROOT / "results" / "frozen_beta_g2.json"
-    out.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-
     # Saturation: second-half movement and regret increments should not dominate.
     if dQ2 > max(1e-9, 2.0 * dQ1) and dQ2 > 1e-6:
         raise AssertionError(f"Q still accelerating: dQ1={dQ1}, dQ2={dQ2}")
