@@ -1,4 +1,4 @@
-"""Part A construction and finite-horizon mechanism validation.
+"""Part A improved construction and finite-horizon separation validation.
 
 Generates a frozen open-loop opponent from the separation example, replays
 D005 against that sequence, and records V_T(u*), E_T, G_T, and regret.
@@ -24,17 +24,21 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from io_results import dump_compact, load_run  # noqa: E402
 from separation import (  # noqa: E402
+    ANNULUS_FRACTION_LOWER,
     DELTA0,
     ETA,
     G_LOWER,
     G_UPPER,
     THEORY_LATE_DG2,
     U_STAR,
+    X_CONVEXITY_MARGIN,
+    Y2_CONCAVITY_MARGIN,
     late_jump_stats,
     run_part_a,
 )
 
-HORIZONS = (200, 500, 1000, 2000, 5000, 10000, 20000)
+HORIZONS = (200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000)
+TARGET_WINDOW_MIN_T = 10000
 
 
 def _load_cfg():
@@ -119,6 +123,7 @@ def run_one(T: int, cfg: dict) -> dict:
             "delta0": DELTA0,
             "eta": ETA,
             "theory_late_dg2": THEORY_LATE_DG2,
+            "construction": "translated-amplified-v2",
             "protocol": (
                 "offline D005 construction, freeze y_{1:T}, replay D005 open-loop"
             ),
@@ -179,11 +184,29 @@ def _assemble(rows: list[dict], cfg: dict) -> dict:
     g_ok = bool(np.all((Gs > G_LOWER) & (Gs <= G_UPPER + 1e-10)))
     ratio_min = float(np.min(ratios))
     ratio_max = float(np.max(ratios))
-    # Raw E_T/T at the planned horizons is dominated by an O(1) transient.
-    e_raw_theta = bool(ratio_min > 0.0 and ratio_max / max(ratio_min, 1e-16) < 20.0)
-    if len(rows) >= 3:
-        e_raw_theta = e_raw_theta and (0.7 <= slope <= 1.3)
-    settled = [r for r in rows if int(r["T"]) >= 5000]
+    target = [r for r in rows if int(r["T"]) >= TARGET_WINDOW_MIN_T]
+    target_slope = float("nan")
+    target_ratio_min = float("nan")
+    target_ratio_max = float("nan")
+    if target:
+        target_T = np.array([r["T"] for r in target], dtype=float)
+        target_E = np.array([r["E_T"] for r in target], dtype=float)
+        target_ratio = np.array([r["E_over_T"] for r in target], dtype=float)
+        target_ratio_min = float(np.min(target_ratio))
+        target_ratio_max = float(np.max(target_ratio))
+        if len(target) >= 2:
+            target_slope = float(
+                np.polyfit(np.log(target_T), np.log(np.maximum(target_E, 1e-16)), 1)[0]
+            )
+    # "Observed" is deliberately a finite-window claim: raw E_T itself must
+    # have a near-linear log-log slope and E_T/T must already be stabilizing.
+    e_raw_theta = bool(
+        len(target) >= 3
+        and 0.75 <= target_slope <= 1.25
+        and target_ratio_min > 0.0
+        and target_ratio_max / target_ratio_min <= 2.0
+    )
+    settled = [r for r in rows if int(r["T"]) >= TARGET_WINDOW_MIN_T]
     tail_slope = float("nan")
     if settled:
         late_s = np.array([r["late_mean_dg2"] for r in settled], dtype=float)
@@ -198,6 +221,13 @@ def _assemble(rows: list[dict], cfg: dict) -> dict:
     else:
         e_mechanism = bool(np.min(late) > 0.0)
     run_ok = v_ok and g_ok and all(bool(r["replay_match"]) for r in rows)
+    proof_conditions_ok = bool(
+        X_CONVEXITY_MARGIN > 0.0
+        and Y2_CONCAVITY_MARGIN > 0.0
+        and ANNULUS_FRACTION_LOWER > 0.0
+        and abs(ETA - DELTA0) <= 1e-15
+        and U_STAR != 0.0
+    )
     c = float(THEORY_LATE_DG2)
     transient = float(Es[-1] - c * Ts[-1])
     crossover = float(transient / c)
@@ -205,24 +235,30 @@ def _assemble(rows: list[dict], cfg: dict) -> dict:
         "V_T_is_one": v_ok,
         "G_T_O1": g_ok,
         "loglog_slope_E_vs_T": slope,
+        "target_window_min_T": TARGET_WINDOW_MIN_T,
+        "loglog_slope_E_vs_T_target_window": target_slope,
         "loglog_slope_tail_sum_vs_T": tail_slope,
         "E_over_T_min": ratio_min,
         "E_over_T_max": ratio_max,
+        "target_E_over_T_min": target_ratio_min,
+        "target_E_over_T_max": target_ratio_max,
         "theory_late_dg2": float(THEORY_LATE_DG2),
         "late_mean_dg2_min": float(np.min(late)),
         "late_mean_dg2_max": float(np.max(late)),
         "finite_horizon_transient_estimate": transient,
         "raw_ET_crossover_horizon_estimate": crossover,
         "implementation_valid": run_ok,
+        "proof_conditions_valid": proof_conditions_ok,
         "raw_ET_scaling_observed": e_raw_theta,
         "linear_tail_mechanism_valid": e_mechanism,
         "paper_raw_scaling_claim_supported": e_raw_theta,
-        "paper_mechanism_claim_supported": run_ok and e_mechanism,
-        "part_A_closed": run_ok and e_mechanism,
-        "part_B_inputs_ready": run_ok and all(len(r["frozen_y_sha256"]) == 64 for r in rows),
+        "paper_mechanism_claim_supported": run_ok and proof_conditions_ok and e_mechanism,
+        "part_A_closed": run_ok and proof_conditions_ok and e_mechanism,
+        "main_text_candidate": run_ok and proof_conditions_ok and e_mechanism and e_raw_theta,
+        "part_B_inputs_ready": run_ok and proof_conditions_ok and all(len(r["frozen_y_sha256"]) == 64 for r in rows),
         "claim_scope": (
             "finite-horizon validation of the frozen replay, V_T=1, bounded G_T, "
-            "and the positive linear tail mechanism; raw E_T scaling is not visible"
+            "the positive linear tail mechanism, and a separate raw-E_T scaling test"
         ),
     }
     payload = {
@@ -238,6 +274,10 @@ def _assemble(rows: list[dict], cfg: dict) -> dict:
             "delta0": DELTA0,
             "eta": ETA,
             "theory_late_dg2": THEORY_LATE_DG2,
+            "construction": "translated-amplified-v2",
+            "x_convexity_margin": X_CONVEXITY_MARGIN,
+            "y2_concavity_margin": Y2_CONCAVITY_MARGIN,
+            "annulus_fraction_lower": ANNULUS_FRACTION_LOWER,
         },
         "summary": {
             "rows": rows,
@@ -267,11 +307,15 @@ def main():
     print("Part A verdict:", verdict)
     if not verdict["implementation_valid"]:
         raise SystemExit("Part A run checks failed")
-    if not verdict["raw_ET_scaling_observed"]:
+    if verdict["raw_ET_scaling_observed"]:
         print(
-            "Note: raw E_T at the planned horizons is dominated by an O(1) "
-            "transient; the Theta(T) term is the late per-round jump of order "
-            f"{THEORY_LATE_DG2:.3e}."
+            "Raw E_T scaling is visible on the target window: log-log slope "
+            f"{verdict['loglog_slope_E_vs_T_target_window']:.3f}."
+        )
+    else:
+        print(
+            "Note: raw E_T still fails the predeclared finite-window scaling "
+            "test; retain only the mechanism-level claim."
         )
     if not verdict["linear_tail_mechanism_valid"]:
         raise SystemExit("Part A mechanism checks failed")

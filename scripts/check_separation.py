@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from games import _vec  # noqa: E402
 from separation import (  # noqa: E402
+    ANNULUS_FRACTION_LOWER,
     DELTA0,
     E0,
     ETA,
@@ -21,7 +22,9 @@ from separation import (  # noqa: E402
     SeparationGame,
     THEORY_LATE_DG2,
     U_STAR,
+    X_CONVEXITY_MARGIN,
     XI_STAR,
+    Y2_CONCAVITY_MARGIN,
     comparator_local_variation,
     generate_opponent_sequence,
     grad_x_scalar,
@@ -55,7 +58,19 @@ def test_constants():
     _assert_close(DELTA0, 0.0411083, "delta0 paper value", atol=5e-7)
     if ETA <= 0.0 or E0 <= 0.0:
         raise AssertionError("eta and e0 must be positive")
+    _assert_close(ETA, DELTA0, "improved eta = delta0", atol=1e-15)
     _assert_close(E0, ETA / 2.0, "e0 = eta/2")
+    _assert_close(U_STAR, 0.25, "translated nonzero comparator", atol=1e-15)
+    if X_CONVEXITY_MARGIN <= 0.0:
+        raise AssertionError("global x-convexity margin must be positive")
+    if Y2_CONCAVITY_MARGIN <= 0.0:
+        raise AssertionError("global y2-concavity margin must be positive")
+    _assert_close(
+        ANNULUS_FRACTION_LOWER,
+        13.0 / 48.0,
+        "positive-density annulus fraction",
+        atol=1e-15,
+    )
     if THEORY_LATE_DG2 <= 0.0:
         raise AssertionError("theory late jump must be positive")
 
@@ -87,7 +102,6 @@ def test_gradients_fd():
     half = float(np.arctanh(0.5))
     x0, y0 = 0.0, np.array([half, half], dtype=_DTYPE)
     g0 = float(game.grad_x_phi(x0, y0)[0])
-    p = float(np.tanh(-1.0))
     expected = grad_x_scalar(x0, 0.5, 0.5)
     _assert_close(g0, expected, "g(0, +1/2, +1/2)")
     if abs(g0) <= G_LOWER:
@@ -158,7 +172,7 @@ def test_generate_replay_and_jump():
     _assert_close(generated["x"], replayed["x"], "x generate vs replay", atol=1e-12)
     _assert_close(generated["g"], replayed["g"], "g generate vs replay", atol=1e-12)
     for t in range(1, 16):
-        floor = E0 * abs(q_prime(float(replayed["x"][t]) - 1.0))
+        floor = E0 * abs(q_prime(float(replayed["x"][t]) - U_STAR))
         jump = abs(float(replayed["g"][t] - replayed["g"][t - 1]))
         if jump + 1e-12 < floor:
             raise AssertionError(f"jump inequality failed at t={t+1}")
@@ -175,7 +189,7 @@ def test_feedback_sign():
     gx, gy = game.feedback(x, y)
     _assert_close(gx, game.grad_x_phi(x, y), "feedback gx")
     _assert_close(gy, -game.grad_y_phi(x, y), "feedback gy = -grad_y phi")
-    _assert_close(_vec(game.comparator_x(), 1), np.array([1.0]), "comparator")
+    _assert_close(_vec(game.comparator_x(), 1), np.array([U_STAR]), "comparator")
 
 
 def main():

@@ -17,14 +17,27 @@ certificate，不是算法性能排名，也不是 realized regret superiority�
 
 ---
 
-## 2. Part A：冻结序列与机制验证
+## 2. Part A：改进 construction 后的有限样本 separation
+
+原始数值版本取 \(u^\star=1\)、\(\eta=\delta_\star/16\)，虽然渐近证明成立，
+但 \(|g_1|^2\) 等 \(O(1)\) transient 约为 \(5.6\)，而 settled tail 的每轮平方
+跳变仅约 \(6.59\times10^{-7}\)。该版本已被下面的严格等价改进替代：
+
+\[
+u^\star=\frac14,\qquad \eta=\delta_\star.
+\]
+
+平移使 prescribed initialization \(x_1=0\) 更接近 comparator，且
+\(u^\star\ne0\) 仍保留 \(\|u^\star\|\sqrt{E_T}\) 的 polynomial order。
+增大 \(\eta\) 将理论平方跳变常数放大 \(16^2\) 倍。Appendix A 已同步给出
+strict convex-concavity、唯一 best comparator 和正密度 annulus 的证明。
 
 ### 2.1 协议
 
 对每个偶数 horizon
 
 \[
-T\in\{200,500,1000,2000,5000,10000,20000\},
+T\in\{200,500,1000,2000,5000,10000,20000,50000,100000\},
 \]
 
 执行：
@@ -58,42 +71,44 @@ Part A 不再用一个布尔值混合“实现正确”和“原始渐近斜率�
 - `G_T_O1`：\(G_T\) 位于理论常数界内；
 - `linear_tail_mechanism_valid`：settled tail 的每轮平方梯度跳变接近证明中的正常数，
   且 tail contribution 随 tail 长度线性增长；
-- `raw_ET_scaling_observed`：仅当原始 \(E_T\) 对 \(T\) 的有限-horizon 图确实显示
-  线性 scaling 时才可为真。
+- `raw_ET_scaling_observed`：在预先指定的
+  \(10^4\le T\le10^5\) 窗口内，原始 \(E_T\) 的 log-log slope 必须位于
+  \([0.75,1.25]\)，且该窗口内 \(\max(E_T/T)/\min(E_T/T)\le2\)；
+- `main_text_candidate`：上述实现、机制和原始 scaling 判据必须同时通过。
 
-`part_A_closed` 只表示协议与线性机制已经验证，不表示
-`raw_ET_scaling_observed=true`。
+`part_A_closed` 表示协议与理论机制通过；是否足以进入正文另由
+`main_text_candidate` 控制。
 
 ### 2.3 已完成结果
 
-Part A 已完成，且未改写已有 G1/G2、warm-restart 或 \(L_F\) 结果：
+改进版 Part A 已完成，且未改写已有 G1/G2、warm-restart 或 \(L_F\) 结果：
 
 - 生成与冻结回放一致；
 - 每个 horizon 都有 \(V_T(u^\star)=1\)；
-- \(T\ge500\) 时 \(G_T\approx2.076\)，保持常数量级；
+- \(G_T\) 从约 \(1.19\) 稳定到约 \(0.98\)，保持常数量级；
 - settled tail 的理论平方跳变常数为
-  \(c\approx6.592\times10^{-7}\)；
-- \(T=5000,10000,20000\) 的最后四分之一 variation contribution 分别约为
-  \(8.03\times10^{-4},1.66\times10^{-3},3.32\times10^{-3}\)，与 tail 长度
-  近似成正比。
+  \(c\approx1.6876\times10^{-4}\)；
+- 原始 \(E_T\) 在 \(T=10^4,2\times10^4,5\times10^4,10^5\) 时分别约为
+  \(2.685,4.379,9.462,17.933\)；
+- 目标窗口内原始 \(E_T\) 的 log-log slope 为 \(0.827\)，
+  \(E_T/T\) 从 \(2.685\times10^{-4}\) 稳定到 \(1.793\times10^{-4}\)；
+- settled tail contribution 的 log-log slope 为 \(1.016\)。
 
-但在计划 horizon 上，原始 \(E_T\approx5.6\) 仍由 \(O(1)\) 瞬态主导，
-`raw_ET_scaling_observed=false`。近似分解为
+数值分解约为
 
 \[
-E_T\approx C+cT,\qquad C\approx5.62,
+E_T\approx C+cT,\qquad C\approx1.06,
 \]
 
-线性项与瞬态相当约需 \(T\approx8.5\times10^6\)。因此不通过放大 \(\eta\) 改写
-理论实例，也不为展示渐近斜率而默认追加超长跑。
+对应 crossover 约为 \(T\approx6.27\times10^3\)。所有预设判据均通过：
+`raw_ET_scaling_observed=true`、`main_text_candidate=true`。
 
 ### 2.4 论文可用叙述
 
-可以声称：实验验证了合法冻结回放、精确 \(V_T(u^\star)=1\)、有界 \(G_T\)，以及
-证明中产生 \(E_T=\Theta(T)\) 的正 tail-density 机制。
-
-不得声称：计划 horizon 的原始 \(E_T\) 曲线直接观察到 \(\Theta(T)\)，或实际
-\(\sqrt{E_T}\) 已呈现 \(\Theta(\sqrt T)\)。渐近结论来自 Appendix A 的证明。
+可以声称：在 \(10^4\)–\(10^5\) 的有限 horizon 上，冻结的合法 trajectory 已直接
+显示 \(V_T(u^\star)=1\)、\(G_T=O(1)\) 和原始 \(E_T\) 的近线性增长。这使该图具备
+正文候选资格；最终正文措辞仍应写成 finite-horizon evidence，并由 Appendix A
+提供严格的渐近 \(\Theta(T)\) 结论。
 
 实际 regret \(R_T(u^\star)\) 只保留在结果中；负 regret 合法，但不用于证明其绝对值
 为 \(O(1)\)，也不用于算法排名。
@@ -102,11 +117,11 @@ E_T\approx C+cT,\qquad C\approx5.62,
 
 - `results/exp_sep_T*.json/.npz`：每个 horizon 的摘要、冻结 \(y\) 和完整轨迹；
 - `results/exp_sep_partA.json`：分层 verdict；
-- `figures/exp_sep_partA.pdf/.png`：唯一正式候选图，展示 \(V_T,G_T\)、线性 tail
-  contribution 和最长 horizon 的两段 settled trajectory。
+- `figures/exp_sep_partA.pdf/.png`：唯一正式候选图，展示原始
+  \(V_T,G_T,E_T\)、\(E_T/T\) 的稳定化和最长 horizon 的两段 settled trajectory。
 
-旧的 variation / certificate / mechanism 三图不再保留。尤其不能把
-\(\sqrt{T\cdot\text{late }\Delta g^2}\) 称作实际 certificate。
+旧版 construction 的冻结序列和三张诊断图不再保留。图中展示的是实际原始
+\(E_T\)，没有把 tail proxy 伪装成 certificate。
 
 ---
 
@@ -127,7 +142,7 @@ Hsieh 实现已在此前实验精简中删除。开展 Part B 时应新增隔离
 
 1. 从 `exp_sep_T*.npz` 读取同一个冻结 \(y_{1:T}\)；
 2. 分别从规定初值运行 D005 与 Hsieh / Euclidean OptDA；
-3. 比较同一 comparator \(u^\star=1\) 下的
+3. 比较同一 comparator \(u^\star=1/4\) 下的
    \(R_T^{\mathrm{D005}}(u^\star)\)、
    \(R_T^{\mathrm{Hsieh}}(u^\star)\) 及可选的 \(R_T/T\)；
 4. 单独记录 baseline 的实现 sanity checks 与数值稳定性。

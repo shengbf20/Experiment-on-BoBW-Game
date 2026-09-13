@@ -15,12 +15,14 @@
 Separation Example 的 Part A 入口是 `scripts/exp_separation.py`，不会改写
 Exp.1–3 或 L_F sweep 的结果。旧 stationary G3 不能作为该实验的替代实现。
 
-Part A 已收口：冻结回放、精确 (V_T(u^\star)=1)、有界 (G_T) 与正的线性 tail
-机制均通过。计划 horizon (T\le2\times10^4) 上，原始 (E_T\) 仍由常数瞬态主导，
-因此不声称数值曲线直接观察到 (E_T=\Theta(T))。唯一正式候选图只展示真实的 tail
-contribution，并明确它是机制诊断而非实际 certificate。各 NPZ 已保存冻结的 `y`，
-汇总同时记录其 `frozen_y_sha256`。Part B 必须直接回放并核对这些序列，不得重新按
-baseline 轨迹构造 opponent。
+Part A 已采用改进 construction 收口：取非零平移 comparator
+(u^\star=1/4)，并在严格证明允许的范围内取 (\eta=\delta_\star)。冻结回放、精确
+(V_T(u^\star)=1)、有界 (G_T) 与线性 tail 机制均通过；在
+(10^4\le T\le10^5) 上，原始 (E_T) 的 log-log slope 为 (0.827)，已直接显示有限样本
+近线性增长。唯一正式候选图展示原始 (V_T,G_T,E_T) 和 (E_T/T)，不使用 tail proxy
+替代 certificate。各 NPZ 已保存新版冻结 `y`，汇总同时记录其
+`frozen_y_sha256`。Part B 必须直接回放并核对这些序列，不得重新按 baseline 轨迹构造
+opponent。
 
 ## 当前实验结构
 

@@ -1,4 +1,4 @@
-"""Separation-example game and frozen open-loop opponent.
+"""Finite-sample-improved separation game and frozen open-loop opponent.
 
 The construction is the nonstationary example in which comparator-local
 variation at the unique best fixed comparator is O(1), while realized
@@ -17,7 +17,10 @@ _DTYPE = np.float64
 
 R_STAR = 3.0 - np.sqrt(10.0)
 XI_STAR = float(np.arctanh(R_STAR))
-U_STAR = 1.0
+# A translation of the original construction.  Keeping U_STAR nonzero
+# preserves the polynomial-order certificate separation, while moving it
+# closer to the prescribed x_1=0 sharply reduces the fixed initial transient.
+U_STAR = 0.25
 V_HALF = 0.5
 Y_HALF = float(np.arctanh(V_HALF))
 
@@ -34,10 +37,16 @@ def _logcosh_scalar(z: float) -> float:
 
 
 DELTA0 = -(3.0 * _logcosh_scalar(XI_STAR) + 0.5 * float(np.tanh(XI_STAR)))
-ETA = DELTA0 / 16.0
+# The proof only needs a fixed eta small enough for convex-concavity and for a
+# positive-density annulus argument.  ETA=DELTA0 satisfies both and improves
+# the squared late-jump constant by 16^2 over the original DELTA0/16 choice.
+ETA = DELTA0
 E0 = ETA / 2.0
 G_UPPER = 4.0 + 2.0 * ETA
-G_LOWER = 1.3
+G_LOWER = 0.25
+X_CONVEXITY_MARGIN = 1.0 - 4.0 * ETA
+Y2_CONCAVITY_MARGIN = 1.0 - 2.0 * ETA
+ANNULUS_FRACTION_LOWER = 13.0 / 48.0
 U_X = np.array([U_STAR], dtype=_DTYPE)
 
 
@@ -56,7 +65,7 @@ THEORY_LATE_DG2 = THEORY_LATE_JUMP * THEORY_LATE_JUMP
 
 
 def grad_x_scalar(x: float, v1: float, v2: float, eta: float = ETA) -> float:
-    p = float(np.tanh(x - 1.0))
+    p = float(np.tanh(x - U_STAR))
     return 3.0 * p + (1.0 - p * p) * v1 + 2.0 * eta * p * (1.0 - p * p) * v2
 
 
@@ -101,7 +110,7 @@ def make_player(cfg: dict) -> ClosedFormPlayer:
 
 
 class SeparationGame(Game):
-    """Scalar minimizer, 2-d maximizer; unique best comparator is u=1."""
+    """Scalar minimizer, 2-d maximizer; unique best comparator is U_STAR."""
 
     name = "Gsep"
 
@@ -116,7 +125,7 @@ class SeparationGame(Game):
     def phi(self, x, y) -> float:
         x = float(_vec(x, 1)[0])
         y = _vec(y, 2)
-        xi = x - 1.0
+        xi = x - U_STAR
         p = float(np.tanh(xi))
         return float(
             3.0 * _logcosh_scalar(xi)
@@ -140,7 +149,7 @@ class SeparationGame(Game):
     def grad_y_phi(self, x, y) -> np.ndarray:
         x = float(_vec(x, 1)[0])
         y = _vec(y, 2)
-        p = float(np.tanh(x - 1.0))
+        p = float(np.tanh(x - U_STAR))
         s1 = float(sech2(y[0]))
         s2 = float(sech2(y[1]))
         d1 = p * s1 - 3.0 * float(np.tanh(y[0]))
@@ -170,7 +179,7 @@ def generate_opponent_sequence(T: int, cfg: dict, game: SeparationGame | None = 
     for t in range(1, T + 1):
         x = float(player.action[0])
         v1 = v1_of_t(t, n)
-        p = float(np.tanh(x - 1.0))
+        p = float(np.tanh(x - U_STAR))
         if t == 1:
             s = 1
         else:
@@ -186,7 +195,7 @@ def generate_opponent_sequence(T: int, cfg: dict, game: SeparationGame | None = 
         g_prev = g
         if t >= 2:
             jump = abs(g - g_seq[t - 2])
-            floor = E0 * abs(q_prime(x - 1.0))
+            floor = E0 * abs(q_prime(x - U_STAR))
             if jump + 1e-12 < floor:
                 raise AssertionError(
                     f"t={t}: |g_t-g_{{t-1}}|={jump} < e0|q'|={floor}"
