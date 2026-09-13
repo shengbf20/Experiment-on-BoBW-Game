@@ -11,6 +11,8 @@ figures/*
 !figures/.gitignore
 !figures/*.pdf
 !figures/*.png
+figures/exp_sep_partB.pdf
+figures/exp_sep_partB.png
 
 Thumbs.db
 .DS_Store

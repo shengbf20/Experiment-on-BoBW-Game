@@ -2,3 +2,6 @@
 !.gitignore
 !*.pdf
 !*.png
+# Part B is log-only and must not be tracked as a paper figure.
+exp_sep_partB.pdf
+exp_sep_partB.png

@@ -64,4 +64,9 @@ Gaussian robustness 单独作为一个很短的 robustness check 即可。
 \text{unknown-smoothness mechanism / robustness}.
 \]
 
-Separation Example 实验作为后续新增内容单独安排，不计入本清单。
+Separation Example 实验作为后续新增内容单独安排，不计入本清单。后来只把
+**Part A finite-horizon illustration** 纳入正文 5.3。Part B（冻结序列上
+D005 vs Hsieh）已运行，但对照序列由 D005 构造、Hsieh 仅有饱和的 \(O(1)\)
+加性优势（\(T=10^5\) 相对差距 \(1.5\%\)），**不写入正文或附录**。局限性和
+数值见 `../note/experiment_log.md`。这与上面“删除所有 Hsieh baseline 对照”
+的决定一致。

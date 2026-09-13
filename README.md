@@ -25,8 +25,9 @@ exhibits near-linear finite-horizon growth（log-log slope \(0.827\)），且
 prediction consistent，但实验并不 establishes 该 rate。唯一正式候选图的左栏标题为
 finite-horizon separation of \(V_T(u^\star)\) and \(E_T\)，不使用
 \(E_T\propto T\) 或 tail proxy。各 NPZ 已保存新版冻结 `y`，汇总同时记录其
-`frozen_y_sha256`。Part A 措辞已与 `../note/skeleton.md` 的 5.3 对齐，可以开始
-Part B：必须直接回放并核对这些序列，不得重新按 baseline 轨迹构造 opponent。
+`frozen_y_sha256`。Part A 措辞已与 `../note/skeleton.md` 的 5.3 对齐。冻结序列
+上的 D005 vs Hsieh（Part B）已运行，但 ranking 信号差、对照序列不公平，**不写入
+正文或附录实验**；局限性和数值只记在 `../note/experiment_log.md`。
 
 ## 当前实验结构
 
@@ -46,14 +47,17 @@ Part B：必须直接回放并核对这些序列，不得重新按 baseline 轨�
    \(T=10^5\) 长跑。warm-vs-restart 只保留 constant-opponent 设置。
 4. **Gaussian self-play robustness**：只保留 G1、seed 1 这一非退化实例。
 
-Hsieh 对照、G1 identity、G3 stationary、\(V_T\) sweep、独立 multi-horizon、
-以及重复的 Gaussian / warm-restart 设置已移除。Hsieh 对照所得的历史结论见
-`../note/experiment_log.md`。
+旧 G2/G3 Hsieh 叠加图、G1 identity、G3 stationary、\(V_T\) sweep、独立
+multi-horizon、以及重复的 Gaussian / warm-restart 设置已移除。Separation
+Part B（冻结 \(y\) 上的 Hsieh 对照）同样不纳入论文实验：Hsieh 仅有饱和的
+\(O(1)\) 加性优势，相对差距在 \(T=10^5\) 为 \(1.5\%\)，且 opponent 按 D005
+构造，不能支撑 ranking。记录见 `../note/experiment_log.md`。
 
 ## 仓库边界与环境
 
 - 外层论文仓库忽略整个 `experiment/`；本目录是独立 Git 仓库。
-- `results/*` 只在本地保存，`figures/*.pdf` 与 `figures/*.png` 由内层仓库跟踪。
+- `results/*` 只在本地保存；`figures/*.pdf` 与 `figures/*.png` 由内层仓库跟踪，
+  但 `exp_sep_partB.*` 明确排除（Part B 不是论文图）。
 - Python 3.12+，CPU；依赖见 `requirements.txt`。
 - 默认设置见 `configs/default.yaml`。投稿实例鞍点为
   \((a,b)=(0.4e_1,0.4e_2)\)，初始化固定为 \(w_1=0\)。
@@ -110,3 +114,6 @@ python scripts/plot_separation.py
 | Warm vs restart | `results/exp3_const_{warm,restart}.*` | `figures/exp3_restart.*` |
 | Unknown-\(L_F\) | `results/exp_lf_c*.*`、`exp_lf_sweep.json` | `figures/exp_lf_sweep.*` |
 | Separation Part A | `results/exp_sep_T*.*`、`exp_sep_partA.json` | `figures/exp_sep_partA.*` |
+
+Part B 的 Hsieh 对照不在上表中，也不作为论文图跟踪。本地脚本仍在
+`scripts/exp_sep_partB.py`，结果只用于核对 `../note/experiment_log.md`。

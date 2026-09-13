@@ -173,6 +173,51 @@ Hsieh 实现已在此前实验精简中删除。开展 Part B 时应新增隔离
   appendix limitation；
 - 无论结果如何，都不得表述为一般性的算法 superiority。
 
+实际结果走第二条：Hsieh 更好但差距饱和。第三条的 appendix limitation 选项已否决，
+因为对照序列不公平、相对差距只有 \(1.5\%\)，放进附录容易被误读成算法排名。
+
+### 3.4 已完成结果
+
+Part B 已按冻结回放协议完成。Hsieh 实现隔离在 `src/hsieh.py`，不导入
+`ClosedFormPlayer`，也不参与 opponent 生成。每个 horizon 都核验了
+`frozen_y_sha256`，D005 回放与 Part A 的 \(x_t,g_t\) 在 \(10^{-12}\) 内一致，
+Hsieh 保持 \(x_1=0\)、有限状态、非降 \(\lambda_t\)，且
+\(\lambda_T=\sqrt{\tau+E_T^{\mathrm{Hsieh}}}\)。G2 self-play smoke 恢复了历史
+终端 \(\mathrm{Reg}^x(a)\approx0.377\)、\(Q_T\approx11.48\)。
+
+同一 comparator \(u^\star=1/4\) 上，Hsieh 的 \(R_T\) 在全部 horizon 都更小
+（更负），但加性差距在 \(T\gtrsim2\times10^3\) 后饱和在约 \(-63\)，并不随
+\(T\) 扩大。目标窗口内：
+
+| \(T\) | \(R_T^{\mathrm{D005}}\) | \(R_T^{\mathrm{Hsieh}}\) | 差距 | \(R_T^{\mathrm{D005}}/T\) | \(R_T^{\mathrm{Hsieh}}/T\) |
+|---:|---:|---:|---:|---:|---:|
+| \(10^4\) | \(-342.7\) | \(-406.6\) | \(-63.9\) | \(-3.43\times10^{-2}\) | \(-4.07\times10^{-2}\) |
+| \(2\times10^4\) | \(-753.8\) | \(-817.4\) | \(-63.6\) | \(-3.77\times10^{-2}\) | \(-4.09\times10^{-2}\) |
+| \(5\times10^4\) | \(-1987.1\) | \(-2050.1\) | \(-63.0\) | \(-3.97\times10^{-2}\) | \(-4.10\times10^{-2}\) |
+| \(10^5\) | \(-4042.5\) | \(-4104.7\) | \(-62.2\) | \(-4.04\times10^{-2}\) | \(-4.10\times10^{-2}\) |
+
+\(T=10^5\) 时相对差距仅 \(1.5\%\)。两者都是大幅负 regret，平均 regret 趋向同一
+负常数。Hsieh 的 \(E_T\) 更大（约 \(124\) vs \(17.9\)），\(G_T\) 约 \(2.61\)
+且有界，\(x_T\) 与 D005 同在 \(0.41\) 附近。
+
+分层判据：`implementation_valid=true`，
+`bonus_experiment_candidate=false`，
+`hsieh_better_or_comparable=true`，
+`certificate_not_realized_separation=true`。
+
+**论文决策（2026-09-13）：不写入实验。** 对照序列由 D005 离线构造，Hsieh 仅有
+饱和的 \(O(1)\) 加性优势，相对差距在 \(T=10^5\) 只有 \(1.5\%\)，两边 \(R_T/T\)
+趋向同一负常数。这既不是 D005 加分实验，也不适合作为 appendix limitation
+图：读者容易误读成算法排名。Part A 不受影响。完整局限性见
+`../note/experiment_log.md`。
+
+### 3.5 Part B 产物（仅本地 / 日志，非论文实验）
+
+- `src/hsieh.py`：隔离的 Euclidean OptDA（\(\tau=1\)，不拟合）；
+- `scripts/check_hsieh.py`：代数恒等式、模块隔离、G2 self-play smoke；
+- `results/exp_sep_partB_T*.json/.npz`、`exp_sep_partB.json`：本地摘要，不进入论文图；
+- 若生成 `figures/exp_sep_partB.*`，也只是诊断图，不跟踪为论文图。
+
 ---
 
 ## 4. 命令
@@ -190,5 +235,21 @@ python scripts/exp_separation.py --assemble
 python scripts/plot_separation.py
 ```
 
-Part B 尚无执行入口。Part A 的措辞与冻结输入已收口；下一阶段从读取现有冻结 `y`
-和隔离实现 baseline 开始，不得按 baseline 轨迹重新构造 opponent。
+Part B 读取已保存冻结 `y`，回放 D005 与 Hsieh，不重新生成 opponent：
+
+```text
+python scripts/check_hsieh.py
+python scripts/exp_sep_partB.py
+python scripts/plot_sep_partB.py
+```
+
+只用已保存 Part B 结果重建 verdict 与图：
+
+```text
+python scripts/exp_sep_partB.py --assemble
+python scripts/plot_sep_partB.py
+```
+
+Part A 的措辞、冻结输入与正文 5.3 候选地位不变。Part B 已关闭为日志记录：
+不得写入正文或附录实验，不得按 baseline 轨迹重新构造 opponent，也不得改写
+已有 G1/G2、warm-restart 或 \(L_F\) 结果。
